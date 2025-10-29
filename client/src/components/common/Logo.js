@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { GraduationCap } from 'lucide-react';
 
 const Logo = ({ size = 'md', showText = true, className = '' }) => {
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState(true); // Default to true (show icon) until image loads
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Size configurations
   const sizeConfig = {
@@ -41,17 +42,40 @@ const Logo = ({ size = 'md', showText = true, className = '' }) => {
     <div className={`flex flex-col items-center ${className}`}>
       {/* Logo Image or Fallback Icon */}
       <div className="flex justify-center mb-2 lg:mb-3">
-        {!imageError ? (
+        {imageLoaded && !imageError ? (
           <img
             src={logoPath}
             alt="Kandara Technical Logo"
             className={`${config.logoImg} object-contain`}
-            onError={() => setImageError(true)}
+            onLoad={() => {
+              setImageLoaded(true);
+              setImageError(false);
+            }}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(false);
+            }}
           />
         ) : (
           <div className={`bg-gradient-to-br from-blue-500 to-blue-700 ${config.container} rounded-full flex items-center justify-center shadow-lg`}>
             <GraduationCap size={config.icon} className="text-white" />
           </div>
+        )}
+        {/* Hidden image to test if logo exists */}
+        {!imageLoaded && (
+          <img
+            src={logoPath}
+            alt=""
+            className="hidden"
+            onLoad={() => {
+              setImageLoaded(true);
+              setImageError(false);
+            }}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(false);
+            }}
+          />
         )}
       </div>
 
