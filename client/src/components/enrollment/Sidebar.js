@@ -1,7 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, LogOut, UserPlus, Menu, X } from 'lucide-react';
+import { Home, LogOut, Menu, X } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
+import Logo from '../common/Logo';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useContext(AuthContext);
@@ -42,12 +43,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       >
         {/* Logo Section */}
         <div className="p-4 lg:p-6 border-b border-purple-500">
-          <div className="flex items-center justify-center mb-3">
-            <div className="bg-white p-2 lg:p-3 rounded-full">
-              <UserPlus size={32} className="text-purple-600 lg:w-10 lg:h-10" />
-            </div>
-          </div>
-          <h2 className="text-center text-base lg:text-lg font-bold">Enrollment Portal</h2>
+          <Logo size="md" showText={true} className="text-white" />
+          <p className="text-center text-xs lg:text-sm text-purple-200 mt-2">Enrollment Dashboard</p>
         </div>
 
         {/* User Info */}

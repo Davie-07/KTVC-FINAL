@@ -3,7 +3,7 @@
 
 const API_URL = process.env.REACT_APP_API_URL || 
                 (process.env.NODE_ENV === 'production' 
-                  ? 'https://your-backend-app.onrender.com'
+                  ? 'https://ktvc-h5iy.onrender.com'
                   : 'http://localhost:5000');
 
 export default API_URL;

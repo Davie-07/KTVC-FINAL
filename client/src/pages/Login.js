@@ -2,7 +2,8 @@ import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../services/axios';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, Eye, EyeOff, Lock, Shield } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield } from 'lucide-react';
+import Logo from '../components/common/Logo';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
@@ -371,13 +372,9 @@ const Login = () => {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-blue-500 p-4 rounded-full">
-              <GraduationCap size={48} className="text-white" />
-            </div>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-          <p className="text-gray-600">Unified Login Portal</p>
+          <Logo size="lg" showText={true} />
+          <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2 mt-4">Welcome Back</h2>
+          <p className="text-sm lg:text-base text-gray-600">Unified Login Portal</p>
         </div>
 
         {/* Login Form */}
