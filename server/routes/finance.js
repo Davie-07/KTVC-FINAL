@@ -4,6 +4,7 @@ const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Fee = require('../models/Fee');
 const Notification = require('../models/Notification');
+const Payment = require('../models/Payment');
 
 // @route   GET /api/finance/students
 // @desc    Get all students with their fee information
@@ -277,6 +278,20 @@ router.get('/dashboard', protect, authorize('finance'), async (req, res) => {
       unpaidCount
     });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/finance/payments
+// @desc    Get all payments
+// @access  Public
+router.get('/payments', async (req, res) => {
+  try {
+    const payments = await Payment.find();
+    // Ensure we're sending an array
+    res.json(payments || []);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
     res.status(500).json({ message: error.message });
   }
 });

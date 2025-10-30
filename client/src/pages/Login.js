@@ -35,7 +35,7 @@ const Login = () => {
     if (identifier.length === 5 && /^\d+$/.test(identifier)) return 'Gate Verification Login (5-digit ID)';
     if (identifier.length === 7 && /^\d+$/.test(identifier)) return 'Finance Login (7-digit ID)';
     if (identifier.length === 4 && /^\d+$/.test(identifier)) return 'Enrollment Login (4-digit ID)';
-    if (identifier.includes('@')) return 'Admin Login';
+    if (identifier.includes('@')) return 'Admin Login (Email + Password)';
     
     return 'Enter your ID or Admission Number';
   };
@@ -66,25 +66,27 @@ const Login = () => {
     setLoading(true);
 
     try {
+      console.log('Login attempt:', { identifier, password, course });
+
       const response = await axios.post('/api/auth/login', {
         identifier,
         password: password || undefined,
         course: course || undefined
       });
 
-      // Check if password setup is required
-      if (response.data.requiresPasswordSetup) {
-        setUserId(response.data._id);
-        setShowPasswordSetup(true);
-        setLoading(false);
-        return;
-      }
+      console.log('Login response:', response.data);
 
-      // Use the login function from AuthContext
-      login(response.data);
+      // Store user data and token
+      const userData = response.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', userData.token);
+      login(userData);
 
-      // Redirect based on role
-      switch (response.data.role) {
+      // Configure axios defaults after successful login
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+
+      // Update navigation paths
+      switch (userData.role) {
         case 'student':
           navigate('/student/home');
           break;
@@ -92,13 +94,13 @@ const Login = () => {
           navigate('/teacher/home');
           break;
         case 'admin':
-          navigate('/admin/home');
+          navigate('/admin/dashboards'); // Update admin path
           break;
         case 'finance':
           navigate('/finance/home');
           break;
         case 'gateverification':
-          navigate('/gate');
+          navigate('/gate/home'); // Update gate verification path
           break;
         case 'enrollment':
           navigate('/enrollment/home');
@@ -106,10 +108,10 @@ const Login = () => {
         default:
           navigate('/');
       }
-
     } catch (error) {
       console.error('Login error:', error.response?.data || error);
       setError(error.response?.data?.message || 'Login failed. Please check your credentials.');
+    } finally {
       setLoading(false);
     }
   };

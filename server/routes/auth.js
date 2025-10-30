@@ -54,18 +54,13 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/login
 // @desc    Unified login for all roles
 // @access  Public
-router.post('/login', authLimiter, constantTimeDelay, async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
-    const { identifier, password, course } = req.body;
-
-    if (!identifier) {
-      return res.status(400).json({ message: 'Identifier is required' });
-    }
+    const { identifier, password } = req.body;
 
     let user;
     let query = {};
 
-    // Determine login type based on identifier format
     if (/^STD/.test(identifier)) {
       // Student login
       query = { admissionNumber: identifier, role: 'student' };
@@ -82,10 +77,8 @@ router.post('/login', authLimiter, constantTimeDelay, async (req, res) => {
       // Enrollment login
       query = { accountId: identifier, role: 'enrollment' };
     } else if (identifier.includes('@')) {
-      // Admin login
-      query = { email: identifier.toLowerCase() };
-    } else {
-      return res.status(400).json({ message: 'Invalid identifier format' });
+      // Admin login using email
+      query = { email: identifier.toLowerCase(), role: 'admin' };
     }
 
     // Find user and populate course if exists
