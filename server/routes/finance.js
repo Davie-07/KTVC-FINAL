@@ -284,15 +284,90 @@ router.get('/dashboard', protect, authorize('finance'), async (req, res) => {
 
 // @route   GET /api/finance/payments
 // @desc    Get all payments
-// @access  Public
-router.get('/payments', async (req, res) => {
+// @access  Private
+router.get('/payments', protect, async (req, res) => {
   try {
-    const payments = await Payment.find();
-    // Ensure we're sending an array
-    res.json(payments || []);
+    const payments = await Payment.find()
+      .populate('student', 'name admissionNumber')
+      .populate('processedBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(payments);
   } catch (error) {
     console.error('Error fetching payments:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error fetching payments' });
+  }
+});
+
+// @route   GET /api/finance/stats
+// @desc    Get finance statistics
+// @access  Private
+router.get('/stats', protect, async (req, res) => {
+  try {
+    const totalPayments = await Payment.aggregate([
+      { $match: { status: 'Confirmed' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const todayPayments = await Payment.aggregate([
+      {
+        $match: {
+          status: 'Confirmed',
+          date: {
+            $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            $lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    res.json({
+      totalCollected: totalPayments[0]?.total || 0,
+      todayCollected: todayPayments[0]?.total || 0,
+      pendingPayments: await Payment.countDocuments({ status: 'Pending' }),
+      totalStudents: await User.countDocuments({ role: 'student' })
+    });
+  } catch (error) {
+    console.error('Error fetching finance stats:', error);
+    res.status(500).json({ message: 'Error fetching finance statistics' });
+  }
+});
+
+// @route   POST /api/finance/payments
+// @desc    Create new payment
+// @access  Private
+router.post('/payments', protect, async (req, res) => {
+  try {
+    const {
+      studentId,
+      amount,
+      paymentMethod,
+      description,
+      semester,
+      academicYear
+    } = req.body;
+
+    const payment = await Payment.create({
+      student: studentId,
+      amount,
+      paymentMethod,
+      description,
+      semester,
+      academicYear,
+      processedBy: req.user._id,
+      receiptNumber: `RCP${Date.now()}`,
+      status: 'Confirmed'
+    });
+
+    const populatedPayment = await Payment.findById(payment._id)
+      .populate('student', 'name admissionNumber')
+      .populate('processedBy', 'name');
+
+    res.status(201).json(populatedPayment);
+  } catch (error) {
+    console.error('Error creating payment:', error);
+    res.status(500).json({ message: 'Error creating payment' });
   }
 });
 
