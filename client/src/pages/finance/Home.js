@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
 import { DollarSign, Users, Clock, AlertCircle } from 'lucide-react';
+import { ensureArray } from '../../utils/normalizeResponse'; // NEW import
 
 const Home = () => {
   const [stats, setStats] = useState({
@@ -38,16 +39,11 @@ const Home = () => {
           totalExpected: Number(s.totalExpected) || 0
         });
 
-        // Normalize payments to an array regardless of backend shape
-        let paymentsData = [];
-        if (Array.isArray(paymentsRes?.data)) {
-          paymentsData = paymentsRes.data;
-        } else if (Array.isArray(paymentsRes?.data?.payments)) {
-          paymentsData = paymentsRes.data.payments;
-        } else if (Array.isArray(paymentsRes?.data?.data)) {
-          paymentsData = paymentsRes.data.data;
-        } else {
-          paymentsData = [];
+        // Normalize payments using helper (covers [], { data: [] }, { payments: [] }, etc.)
+        const paymentsData = ensureArray(paymentsRes?.data);
+        if (!Array.isArray(paymentsRes?.data) && paymentsData.length === 0 && paymentsRes?.data) {
+          // Backend returned something unexpected (object without known keys) — log for debugging
+          console.warn('Finance payments endpoint returned non-array shape:', paymentsRes.data);
         }
         setPayments(paymentsData);
       } catch (err) {
