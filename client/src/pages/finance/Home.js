@@ -47,6 +47,10 @@ const Home = () => {
           axios.get('/api/finance/payments')
         ]);
 
+        // DEBUG: log raw responses (copy-paste this JSON if issue persists)
+        console.debug('DEBUG /api/finance/dashboard response:', statsRes?.data);
+        console.debug('DEBUG /api/finance/payments response:', paymentsRes?.data);
+
         const s = statsRes?.data || {};
         setStats({
           totalCollected: Number(s.totalCollected) || 0,
@@ -60,17 +64,11 @@ const Home = () => {
         });
 
         // prefer shared ensureArray if available, fallback to local normalizer
-        const paymentsData = (typeof ensureArray === 'function')
-          ? ensureArray(paymentsRes?.data)
-          : normalizeArrayLocal(paymentsRes?.data);
-
-        // If still not an array, use local fallback and log for debugging
-        if (!Array.isArray(paymentsData)) {
-          console.warn('Finance payments endpoint returned non-array shape:', paymentsRes?.data);
-          setPayments(normalizeArrayLocal(paymentsRes?.data));
-        } else {
-          setPayments(paymentsData);
+        const paymentsData = ensureArray(paymentsRes?.data);
+        if (paymentsData.length === 0 && paymentsRes?.data) {
+          console.warn('Finance payments endpoint returned unexpected shape (normalized to empty array):', paymentsRes?.data);
         }
+        setPayments(paymentsData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err.message || 'An error occurred');

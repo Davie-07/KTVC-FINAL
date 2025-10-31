@@ -1,16 +1,30 @@
-// Utility to normalize API response shapes into arrays
-function ensureArray(respData, knownKeys = ['data', 'payments', 'users', 'items']) {
-	// If already an array, return it
+export function ensureArray(respData, knownKeys = ['data', 'payments', 'users', 'items']) {
+	// Already an array
 	if (Array.isArray(respData)) return respData;
 
-	// If it's an object, try known keys that may contain the array
-	if (respData && typeof respData === 'object') {
+	// Null / undefined
+	if (respData == null) return [];
+
+	// If the response is an object, try known keys
+	if (typeof respData === 'object') {
 		for (const key of knownKeys) {
 			if (Array.isArray(respData[key])) return respData[key];
 		}
+
+		// nested data: { data: { items: [...] } }
+		if (respData.data && typeof respData.data === 'object') {
+			for (const key of knownKeys) {
+				if (Array.isArray(respData.data[key])) return respData.data[key];
+			}
+		}
+
+		// If it's an iterable (Set, Map values), convert to array
+		if (typeof respData[Symbol.iterator] === 'function') {
+			try { return Array.from(respData); } catch (e) { /* ignore */ }
+		}
 	}
 
-	// Fallback: return empty array
+	// fallback: empty array
 	return [];
 }
 
