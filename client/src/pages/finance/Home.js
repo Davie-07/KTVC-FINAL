@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
 import { DollarSign, Users, Clock, AlertCircle } from 'lucide-react';
-import { ensureArray } from '../../utils/normalizeResponse'; // NEW import
+import { ensureArray } from '../../utils/normalizeResponse';
 
 const Home = () => {
   const [stats, setStats] = useState({
@@ -17,6 +17,26 @@ const Home = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Local fallback normalizer (covers more shapes and iterables)
+  const normalizeArrayLocal = (raw) => {
+    if (Array.isArray(raw)) return raw;
+    if (!raw) return [];
+    if (typeof raw === 'object') {
+      // try known keys
+      const keys = ['payments', 'data', 'items', 'results', 'rows', 'users'];
+      for (const k of keys) if (Array.isArray(raw[k])) return raw[k];
+      // handle paginated shape { data: { items: [...] } }
+      if (raw.data && typeof raw.data === 'object') {
+        for (const k of keys) if (Array.isArray(raw.data[k])) return raw.data[k];
+      }
+      // if it's an iterable (e.g., Set), convert to array
+      if (typeof raw[Symbol.iterator] === 'function') {
+        try { return Array.from(raw); } catch (_) {}
+      }
+    }
+    return [];
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,13 +59,18 @@ const Home = () => {
           totalExpected: Number(s.totalExpected) || 0
         });
 
-        // Normalize payments using helper (covers [], { data: [] }, { payments: [] }, etc.)
-        const paymentsData = ensureArray(paymentsRes?.data);
-        if (!Array.isArray(paymentsRes?.data) && paymentsData.length === 0 && paymentsRes?.data) {
-          // Backend returned something unexpected (object without known keys) — log for debugging
-          console.warn('Finance payments endpoint returned non-array shape:', paymentsRes.data);
+        // prefer shared ensureArray if available, fallback to local normalizer
+        const paymentsData = (typeof ensureArray === 'function')
+          ? ensureArray(paymentsRes?.data)
+          : normalizeArrayLocal(paymentsRes?.data);
+
+        // If still not an array, use local fallback and log for debugging
+        if (!Array.isArray(paymentsData)) {
+          console.warn('Finance payments endpoint returned non-array shape:', paymentsRes?.data);
+          setPayments(normalizeArrayLocal(paymentsRes?.data));
+        } else {
+          setPayments(paymentsData);
         }
-        setPayments(paymentsData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err.message || 'An error occurred');
@@ -71,8 +96,25 @@ const Home = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
-  // Safety wrapper before any array methods
+  // Ensure payments is a pure array before any array operations
   const safePayments = Array.isArray(payments) ? payments : [];
+
+  // Precompute rows inside try/catch to avoid runtime crash when rendering
+  let paymentsRows = [];
+  try {
+    paymentsRows = safePayments.map((payment) => (
+      <tr key={payment._id}>
+        <td className="px-6 py-4">{payment.student?.name || 'N/A'}</td>
+        <td className="px-6 py-4">KES {payment.amount?.toLocaleString()}</td>
+        <td className="px-6 py-4">{payment.date ? new Date(payment.date).toLocaleDateString() : 'N/A'}</td>
+        <td className="px-6 py-4">{payment.status || 'N/A'}</td>
+      </tr>
+    ));
+  } catch (e) {
+    // Log full object for debugging without changing UI
+    console.error('Error while building payments rows:', e, 'payments value:', payments);
+    paymentsRows = []; // graceful fallback
+  }
 
   return (
     <div className="p-6">
@@ -118,7 +160,7 @@ const Home = () => {
           <h2 className="text-lg font-semibold">Recent Payments</h2>
         </div>
         <div className="overflow-x-auto">
-          {safePayments.length > 0 ? (
+          {paymentsRows.length > 0 ? (
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -129,14 +171,7 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {safePayments.map((payment) => (
-                  <tr key={payment._id}>
-                    <td className="px-6 py-4">{payment.student?.name || 'N/A'}</td>
-                    <td className="px-6 py-4">KES {payment.amount?.toLocaleString()}</td>
-                    <td className="px-6 py-4">{new Date(payment.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4">{payment.status}</td>
-                  </tr>
-                ))}
+                {paymentsRows}
               </tbody>
             </table>
           ) : (
