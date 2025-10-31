@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
+import { DollarSign, Users, Clock, AlertCircle } from 'lucide-react';
 
 const Home = () => {
   const [stats, setStats] = useState({
     totalCollected: 0,
     todayCollected: 0,
     pendingPayments: 0,
-    totalStudents: 0
+    totalStudents: 0,
+    paidCount: 0,
+    partialCount: 0,
+    unpaidCount: 0,
+    totalExpected: 0
   });
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,15 +22,20 @@ const Home = () => {
       try {
         setLoading(true);
         const [statsRes, paymentsRes] = await Promise.all([
-          axios.get('/api/finance/stats'),
+          axios.get('/api/finance/dashboard'), // This endpoint should return all finance stats
           axios.get('/api/finance/payments')
         ]);
 
-        setStats(statsRes.data || {
-          totalCollected: 0,
-          todayCollected: 0,
-          pendingPayments: 0,
-          totalStudents: 0
+        // Set stats from database
+        setStats({
+          totalCollected: statsRes.data.totalCollected || 0,
+          todayCollected: statsRes.data.todayCollected || 0,
+          pendingPayments: statsRes.data.pendingPayments || 0,
+          totalStudents: statsRes.data.totalStudents || 0,
+          paidCount: statsRes.data.paidCount || 0,
+          partialCount: statsRes.data.partialCount || 0,
+          unpaidCount: statsRes.data.unpaidCount || 0,
+          totalExpected: statsRes.data.totalExpected || 0
         });
         
         setPayments(Array.isArray(paymentsRes.data) ? paymentsRes.data : []);
@@ -43,15 +53,44 @@ const Home = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
+  const safePayments = Array.isArray(payments) ? payments : [];
+
   return (
     <div className="p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-gray-500 text-sm">Total Collections</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-gray-500 text-sm">Total Collections</h3>
+            <DollarSign className="text-green-500" size={20} />
+          </div>
           <p className="text-2xl font-bold">KES {stats.totalCollected.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-2">Expected: KES {stats.totalExpected.toLocaleString()}</p>
         </div>
-        {/* Add more stat cards */}
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-gray-500 text-sm">Today's Collections</h3>
+            <Clock className="text-blue-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold">KES {stats.todayCollected.toLocaleString()}</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-gray-500 text-sm">Pending Payments</h3>
+            <AlertCircle className="text-orange-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold">{stats.pendingPayments}</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-gray-500 text-sm">Total Students</h3>
+            <Users className="text-purple-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold">{stats.totalStudents}</p>
+        </div>
       </div>
 
       {/* Payments Table */}
@@ -60,7 +99,7 @@ const Home = () => {
           <h2 className="text-lg font-semibold">Recent Payments</h2>
         </div>
         <div className="overflow-x-auto">
-          {payments.length > 0 ? (
+          {safePayments.length > 0 ? (
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -71,7 +110,7 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {payments.map((payment) => (
+                {safePayments.map((payment) => (
                   <tr key={payment._id}>
                     <td className="px-6 py-4">{payment.student?.name || 'N/A'}</td>
                     <td className="px-6 py-4">KES {payment.amount?.toLocaleString()}</td>
