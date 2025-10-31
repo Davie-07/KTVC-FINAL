@@ -39,6 +39,22 @@ const Home = () => {
   };
 
   useEffect(() => {
+    const looksLikeStudentsArray = (arr) => {
+      if (!Array.isArray(arr) || arr.length === 0) return false;
+      // If most items have admissionNumber or course and DON'T have amount or receiptNumber, it's likely students
+      let studentLike = 0;
+      let paymentLike = 0;
+      for (const it of arr.slice(0, 10)) { // sample up to first 10
+        const hasAdmission = !!(it && (it.admissionNumber || it.admission_no || it.admission));
+        const hasAmount = !!(it && (it.amount || it.totalAmount || it.payments));
+        const hasReceipt = !!(it && (it.receiptNumber || it.receipt_no));
+        if (hasAdmission && !hasAmount && !hasReceipt) studentLike++;
+        if (hasAmount || hasReceipt) paymentLike++;
+      }
+      // If majority look like students, treat as students array
+      return studentLike > paymentLike;
+    };
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -48,8 +64,8 @@ const Home = () => {
         ]);
 
         // DEBUG: log raw responses (copy-paste this JSON if issue persists)
-        console.debug('DEBUG /api/finance/dashboard response:', statsRes?.data);
-        console.debug('DEBUG /api/finance/payments response:', paymentsRes?.data);
+        console.debug('DEBUG /api/finance/dashboard response (type, sample):', typeof statsRes?.data, statsRes?.data && Object.keys(statsRes.data).slice(0,5));
+        console.debug('DEBUG /api/finance/payments response (type, sample):', typeof paymentsRes?.data, Array.isArray(paymentsRes?.data) ? `array length ${paymentsRes.data.length}` : Object.keys(paymentsRes?.data || {}).slice(0,5));
 
         const s = statsRes?.data || {};
         setStats({
@@ -63,12 +79,21 @@ const Home = () => {
           totalExpected: Number(s.totalExpected) || 0
         });
 
-        // prefer shared ensureArray if available, fallback to local normalizer
+        // Normalize payments using shared helper
         const paymentsData = ensureArray(paymentsRes?.data);
-        if (paymentsData.length === 0 && paymentsRes?.data) {
-          console.warn('Finance payments endpoint returned unexpected shape (normalized to empty array):', paymentsRes?.data);
+
+        // Additional safety: if paymentsData looks like a students array, do not use as payments
+        if (Array.isArray(paymentsData) && paymentsData.length > 0 && looksLikeStudentsArray(paymentsData)) {
+          console.warn('Finance payments endpoint returned a STUDENTS array — treating as no payments. Sample item:', paymentsData[0]);
+          setPayments([]); // avoid calling .map/.filter on wrong shape
+        } else {
+          // If paymentsData is empty but paymentsRes.data contains nested array under other keys, ensureArray should handle that.
+          // Log if data exists but normalized result is empty, so you can paste the response here.
+          if ((!Array.isArray(paymentsData) || paymentsData.length === 0) && paymentsRes?.data) {
+            console.warn('Finance payments endpoint returned unexpected shape (normalized to empty array):', paymentsRes.data);
+          }
+          setPayments(Array.isArray(paymentsData) ? paymentsData : []);
         }
-        setPayments(paymentsData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err.message || 'An error occurred');
