@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../services/axios'; // use project's axios instance
 import { UserPlus, Users, Edit, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff } from 'lucide-react';
 
 const Dashboards = () => {
@@ -27,18 +27,27 @@ const Dashboards = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get('/api/admin/users');
-      setUsers(response.data);
+
+      // Accept either an array response or { users: [...] } or nested shapes
+      const usersData = Array.isArray(response.data)
+        ? response.data
+        : (response.data?.users || response.data?.data || []);
+
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]); // ensure users is always an array
     }
   };
 
   const fetchCourses = async () => {
     try {
       const response = await axios.get('/api/admin/courses');
-      setCourses(response.data.filter(c => c.isActive));
+      const coursesData = Array.isArray(response.data) ? response.data : (response.data?.courses || []);
+      setCourses(Array.isArray(coursesData) ? coursesData.filter(c => c.isActive) : []);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      setCourses([]);
     }
   };
 
@@ -133,10 +142,14 @@ const Dashboards = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
+  // Safely compute filtered users
+  const safeUsers = Array.isArray(users) ? users : [];
+  const filteredUsers = safeUsers.filter(user => {
     const matchesRole = filterRole === 'all' || user.role === filterRole;
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = (user.name || '').toString().toLowerCase();
+    const email = (user.email || '').toString().toLowerCase();
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = name.includes(term) || email.includes(term);
     return matchesRole && matchesSearch;
   });
 

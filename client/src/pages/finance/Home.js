@@ -22,26 +22,48 @@ const Home = () => {
       try {
         setLoading(true);
         const [statsRes, paymentsRes] = await Promise.all([
-          axios.get('/api/finance/dashboard'), // This endpoint should return all finance stats
+          axios.get('/api/finance/dashboard'),
           axios.get('/api/finance/payments')
         ]);
 
-        // Set stats from database
+        const s = statsRes?.data || {};
         setStats({
-          totalCollected: statsRes.data.totalCollected || 0,
-          todayCollected: statsRes.data.todayCollected || 0,
-          pendingPayments: statsRes.data.pendingPayments || 0,
-          totalStudents: statsRes.data.totalStudents || 0,
-          paidCount: statsRes.data.paidCount || 0,
-          partialCount: statsRes.data.partialCount || 0,
-          unpaidCount: statsRes.data.unpaidCount || 0,
-          totalExpected: statsRes.data.totalExpected || 0
+          totalCollected: Number(s.totalCollected) || 0,
+          todayCollected: Number(s.todayCollected) || 0,
+          pendingPayments: Number(s.pendingPayments) || 0,
+          totalStudents: Number(s.totalStudents) || 0,
+          paidCount: Number(s.paidCount) || 0,
+          partialCount: Number(s.partialCount) || 0,
+          unpaidCount: Number(s.unpaidCount) || 0,
+          totalExpected: Number(s.totalExpected) || 0
         });
-        
-        setPayments(Array.isArray(paymentsRes.data) ? paymentsRes.data : []);
+
+        // Normalize payments to an array regardless of backend shape
+        let paymentsData = [];
+        if (Array.isArray(paymentsRes?.data)) {
+          paymentsData = paymentsRes.data;
+        } else if (Array.isArray(paymentsRes?.data?.payments)) {
+          paymentsData = paymentsRes.data.payments;
+        } else if (Array.isArray(paymentsRes?.data?.data)) {
+          paymentsData = paymentsRes.data.data;
+        } else {
+          paymentsData = [];
+        }
+        setPayments(paymentsData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err.message || 'An error occurred');
+        setStats({
+          totalCollected: 0,
+          todayCollected: 0,
+          pendingPayments: 0,
+          totalStudents: 0,
+          paidCount: 0,
+          partialCount: 0,
+          unpaidCount: 0,
+          totalExpected: 0
+        });
+        setPayments([]);
       } finally {
         setLoading(false);
       }
@@ -53,6 +75,7 @@ const Home = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
+  // Safety wrapper before any array methods
   const safePayments = Array.isArray(payments) ? payments : [];
 
   return (
