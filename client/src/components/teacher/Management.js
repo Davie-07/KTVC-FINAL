@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../services/axios';
 import { Settings, FileText, GraduationCap, Trash2, Edit, Save, X } from 'lucide-react';
 
 const Management = () => {

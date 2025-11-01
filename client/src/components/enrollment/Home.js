@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
 import { UserPlus, Check, AlertCircle, Loader } from 'lucide-react';
 
@@ -29,9 +29,11 @@ const Home = () => {
   const fetchCourses = async () => {
     try {
       const response = await axios.get('/api/enrollment/courses');
-      setCourses(response.data);
+      // Ensure response.data is an array
+      setCourses(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      setCourses([]); // Set to empty array on error
     }
   };
 
@@ -239,7 +241,7 @@ const Home = () => {
                 required
               >
                 <option value="">Select a course</option>
-                {courses.map((course) => (
+                {(Array.isArray(courses) ? courses : []).map((course) => (
                   <option key={course._id} value={course._id}>
                     {course.name} ({course.code})
                   </option>

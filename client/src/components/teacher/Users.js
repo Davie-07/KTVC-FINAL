@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../services/axios';
 import { Users as UsersIcon, Edit, Save, X, Search } from 'lucide-react';
 
 const Users = () => {
