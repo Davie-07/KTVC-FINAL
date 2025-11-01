@@ -20,7 +20,10 @@ const GateDashboard = () => {
   const [stats, setStats] = useState(null);
 
   React.useEffect(() => {
-    if (user && user.role === 'gate') {
+    console.log('Gate Dashboard - User:', user);
+    console.log('Gate Dashboard - Loading:', loading);
+    if (user && (user.role === 'gate' || user.role === 'gateverification')) {
+      console.log('Fetching gate dashboard data...');
       fetchTodayVerifications();
       fetchStats();
     }
@@ -62,18 +65,20 @@ const GateDashboard = () => {
           student: response.data.student,
           expiryDate: response.data.expiryDate,
           verificationTime: response.data.verificationTime,
-          message: response.data.message
+          message: response.data.message,
+          warning: response.data.warning, // 2nd verification warning
+          verificationsToday: response.data.verificationsToday
         });
         setShowPopup(true);
 
-        // Auto-close after 4 seconds
+        // Auto-close after 5 seconds (more time if there's a warning)
         setTimeout(() => {
           setShowPopup(false);
           setFormData({ admissionNumber: '', course: '', verificationCode: '' });
           setRequiresCode(false);
           fetchTodayVerifications();
           fetchStats();
-        }, 4000);
+        }, response.data.warning ? 6000 : 4000);
 
       } else if (response.data.isExpired) {
         // Expired gate pass
@@ -98,17 +103,20 @@ const GateDashboard = () => {
       if (error.response?.data) {
         const errorData = error.response.data;
 
-        if (errorData.alreadyVerified) {
-          // Student already verified today
-          setError(errorData.message);
-          setTimeout(() => setError(''), 5000);
-        } else if (errorData.requiresCode) {
-          // Need 6-digit code
+        if (errorData.requiresCode) {
+          // Need 6-digit code (3rd+ verification)
           setRequiresCode(true);
           setError(errorData.message);
+          console.log('Verification code required. Code sent to student dashboard.');
         } else {
           setError(errorData.message || 'Verification failed');
-          setTimeout(() => setError(''), 5000);
+          setTimeout(() => {
+            setError('');
+            // Reset form on non-code-required errors
+            if (!errorData.requiresCode) {
+              setFormData({ admissionNumber: '', course: '', verificationCode: '' });
+            }
+          }, 5000);
         }
       } else {
         setError('Network error. Please try again.');
@@ -122,15 +130,23 @@ const GateDashboard = () => {
     window.location.href = '/login';
   };
 
+  console.log('Gate Dashboard Render - Loading:', loading, 'User:', user);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+        <div className="text-xl text-gray-700">Loading Gate Dashboard...</div>
       </div>
     );
   }
 
-  if (!user || user.role !== 'gate') {
+  if (!user) {
+    console.log('No user found, redirecting to login');
+    return <Navigate to="/login" />;
+  }
+
+  if (user.role !== 'gate' && user.role !== 'gateverification') {
+    console.log('User role is not gate:', user.role, 'redirecting to login');
     return <Navigate to="/login" />;
   }
 
@@ -226,7 +242,7 @@ const GateDashboard = () => {
                 <div className="flex items-start mb-3">
                   <AlertCircle className="text-yellow-600 mr-2 flex-shrink-0" size={20} />
                   <p className="text-sm text-yellow-800">
-                    This student has been verified 3 times today. A 6-digit verification code has been sent to their dashboard. Please ask the student for the code.
+                    <strong>Security Check Required:</strong> This admission has been verified twice today already. For security, a 6-digit verification code has been sent to the student's dashboard. Please ask the student for the code to confirm their identity.
                   </p>
                 </div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -387,12 +403,25 @@ const GateDashboard = () => {
                   <p className="text-md font-semibold text-gray-700">{popupData.verificationTime}</p>
                 </div>
               )}
+
+              {/* Warning message for 2nd verification */}
+              {popupData.warning && (
+                <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mt-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="text-yellow-600 mr-2 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-800 mb-1">Security Warning</p>
+                      <p className="text-xs text-yellow-700">{popupData.warning}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <p className={`mt-6 text-center text-sm ${
               popupData.type === 'success' ? 'text-green-700' : 'text-red-700'
             }`}>
-              This popup will close in 4 seconds
+              This popup will close in {popupData.warning ? '6' : '4'} seconds
             </p>
           </div>
         </div>

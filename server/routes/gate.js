@@ -29,7 +29,7 @@ const getTodayEnd = () => {
 // @route   POST /api/gate/verify
 // @desc    Verify student gate pass
 // @access  Private/Gate
-router.post('/verify', protect, authorize('gate'), async (req, res) => {
+router.post('/verify', protect, authorize('gate', 'gateverification'), async (req, res) => {
   try {
     const { admissionNumber, course, verificationCode } = req.body;
 
@@ -67,28 +67,10 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
       }
     });
 
-    // If verified once today and trying again without code
-    if (verificationsToday >= 1 && !verificationCode) {
-      // Get the first verification time
-      const firstVerification = await GateVerification.findOne({
-        admissionNumber,
-        verificationDate: {
-          $gte: todayStart,
-          $lte: todayEnd
-        }
-      }).sort('createdAt');
+    console.log(`Admission ${admissionNumber} has been verified ${verificationsToday} times today`);
 
-      return res.status(400).json({
-        success: false,
-        alreadyVerified: true,
-        message: `This student was already verified today at ${firstVerification.verificationTime}`,
-        verificationTime: firstVerification.verificationTime,
-        requiresCode: false
-      });
-    }
-
-    // If verified 3 times today, require verification code
-    if (verificationsToday >= 3 && !verificationCode) {
+    // If verified 2+ times today (3rd attempt), require verification code
+    if (verificationsToday >= 2 && !verificationCode) {
       // Check if code already exists for today
       let receipt = await VerificationReceipt.findOne({
         student: student._id,
@@ -117,8 +99,8 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
           recipient: student._id,
           sender: req.user._id,
           type: 'gatepass',
-          title: 'Gate Verification Code',
-          message: `Your gate verification code is: ${code}. This code is valid until end of day.`,
+          title: 'Gate Verification Code Required',
+          message: `SECURITY ALERT: Your admission number has been used for verification multiple times today. Your verification code is: ${code}. This code is valid until end of day. If you did not request this, please contact security.`,
           priority: 'high'
         });
       }
@@ -126,13 +108,14 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
       return res.status(400).json({
         success: false,
         requiresCode: true,
-        message: 'This student has been verified 3 times today. A 6-digit verification code has been sent to the student dashboard.',
-        codeSentToStudent: true
+        message: 'This admission has been verified twice today already. For security, a 6-digit verification code has been sent to the student dashboard. Please ask the student for the code.',
+        codeSentToStudent: true,
+        verificationsToday
       });
     }
 
-    // If code is required (3+ verifications) and provided, validate it
-    if (verificationsToday >= 3 && verificationCode) {
+    // If code is required (2+ verifications) and provided, validate it
+    if (verificationsToday >= 2 && verificationCode) {
       const receipt = await VerificationReceipt.findOne({
         student: student._id,
         verificationCode,
@@ -199,6 +182,19 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
       verifiedBy: req.user._id
     });
 
+    // Get previous verification time for warning message
+    let previousVerificationTime = null;
+    if (verificationsToday === 1) {
+      const previousVerification = await GateVerification.findOne({
+        admissionNumber,
+        verificationDate: {
+          $gte: todayStart,
+          $lte: todayEnd
+        }
+      }).sort('createdAt');
+      previousVerificationTime = previousVerification?.verificationTime;
+    }
+
     // Return verification result
     res.json({
       success: !isExpired,
@@ -213,8 +209,13 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
       verificationTime: verification.verificationTime,
       status,
       balance: latestFee.balance,
+      verificationsToday: verificationsToday + 1, // Include current verification
+      previousVerificationTime,
+      warning: verificationsToday === 1 
+        ? `This admission was already verified today at ${previousVerificationTime}. Next verification will require a security code.`
+        : null,
       message: isExpired 
-        ? `Gate pass expired on ${new Date(latestFee.gatepassExpiryDate).toLocaleDateString()}`
+        ? `Gate pass expired on ${new Date(latestFee.gatepassExpiryDate).toLocaleDateString()}. Please pay your fees.`
         : `Valid gate pass until ${new Date(latestFee.gatepassExpiryDate).toLocaleDateString()}`
     });
 
@@ -229,7 +230,7 @@ router.post('/verify', protect, authorize('gate'), async (req, res) => {
 // @route   GET /api/gate/verifications/today
 // @desc    Get today's verifications
 // @access  Private/Gate
-router.get('/verifications/today', protect, authorize('gate'), async (req, res) => {
+router.get('/verifications/today', protect, authorize('gate', 'gateverification'), async (req, res) => {
   try {
     const todayStart = getTodayStart();
     const todayEnd = getTodayEnd();
@@ -253,7 +254,7 @@ router.get('/verifications/today', protect, authorize('gate'), async (req, res) 
 // @route   GET /api/gate/verifications/history
 // @desc    Get verification history
 // @access  Private/Gate
-router.get('/verifications/history', protect, authorize('gate'), async (req, res) => {
+router.get('/verifications/history', protect, authorize('gate', 'gateverification'), async (req, res) => {
   try {
     const { startDate, endDate, limit = 50 } = req.query;
 
@@ -311,7 +312,7 @@ router.get('/student/:admissionNumber/receipts', protect, async (req, res) => {
 // @route   GET /api/gate/dashboard
 // @desc    Get gate verification dashboard stats
 // @access  Private/Gate
-router.get('/dashboard', protect, authorize('gate'), async (req, res) => {
+router.get('/dashboard', protect, authorize('gate', 'gateverification'), async (req, res) => {
   try {
     const todayStart = getTodayStart();
     const todayEnd = getTodayEnd();

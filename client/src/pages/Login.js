@@ -100,7 +100,10 @@ const Login = () => {
           navigate('/finance/home');
           break;
         case 'gateverification':
-          navigate('/gate/home'); // Update gate verification path
+          navigate('/gate'); // Update gate verification path
+          break;
+        case 'gate':
+          navigate('/gate'); // Alternative gate role name
           break;
         case 'enrollment':
           navigate('/enrollment/home');
