@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
 import { DollarSign, Users, Search, Edit, Save, X, Calendar, AlertCircle } from 'lucide-react';
 
@@ -36,10 +36,12 @@ const Home = () => {
   const fetchStudents = async () => {
     try {
       const response = await axios.get('/api/finance/students');
-      setStudents(response.data);
+      // Ensure response.data is an array
+      setStudents(Array.isArray(response.data) ? response.data : []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching students:', error);
+      setStudents([]); // Set to empty array on error
       setLoading(false);
     }
   };
@@ -137,10 +139,11 @@ const Home = () => {
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.course?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Ensure students is always an array before filtering
+  const filteredStudents = (Array.isArray(students) ? students : []).filter(student =>
+    student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.admissionNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.course?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
