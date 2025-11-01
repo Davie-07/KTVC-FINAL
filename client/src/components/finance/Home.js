@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { DollarSign, Users, Search, Edit, Save, X, Calendar, AlertCircle } from 'lucide-react';
+import { DollarSign, Users, Search, Edit, Save, X, Calendar, AlertCircle, Download } from 'lucide-react';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -11,6 +11,10 @@ const Home = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showFeeForm, setShowFeeForm] = useState(false);
   const [stats, setStats] = useState(null);
+  const [downloadFilters, setDownloadFilters] = useState({
+    course: '',
+    status: ''
+  });
 
   const [feeForm, setFeeForm] = useState({
     totalAmount: '',
@@ -139,6 +143,25 @@ const Home = () => {
     }
   };
 
+  const handleDownloadPayments = async () => {
+    try {
+      const response = await axios.get('/api/downloads/finance/payments', {
+        params: downloadFilters,
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `Fee_Payments_${downloadFilters.course || 'All'}_${downloadFilters.status || 'All'}_${Date.now()}.xlsx`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading payments data: ' + error.message);
+    }
+  };
+
   // Ensure students is always an array before filtering
   const filteredStudents = (Array.isArray(students) ? students : []).filter(student =>
     student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -224,6 +247,61 @@ const Home = () => {
           </div>
         </div>
       )}
+
+      {/* Download Data Section */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="flex items-center mb-6">
+          <Download className="text-blue-600 mr-3" size={28} />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Download Fee Payments Data</h2>
+            <p className="text-sm text-gray-600">Export payment records to Excel</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Course (Optional)</label>
+            <select
+              value={downloadFilters.course}
+              onChange={(e) => setDownloadFilters({ ...downloadFilters, course: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Courses</option>
+              {[...new Set(students.map(s => s.course?.name))].filter(Boolean).map(course => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status (Optional)</label>
+            <select
+              value={downloadFilters.status}
+              onChange={(e) => setDownloadFilters({ ...downloadFilters, status: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Status</option>
+              <option value="Paid">Paid</option>
+              <option value="Partial">Partial</option>
+              <option value="Unpaid">Unpaid</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleDownloadPayments}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transition"
+            >
+              <Download size={20} className="mr-2" />
+              Download Payments
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          📊 Excel file includes: Admission No., Student Names, Courses, Total Amount, Amount Paid, Balance, Status, Semester, Academic Year, and Payment Dates
+        </p>
+      </div>
 
       {/* Search Bar */}
       <div className="bg-white rounded-xl p-4 mb-6 shadow-md">

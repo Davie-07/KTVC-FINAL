@@ -103,6 +103,7 @@ app.use('/api/gate', require('./routes/gate'));
 app.use('/api/enrollment', require('./routes/enrollment'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/kra', require('./routes/kra'));
+app.use('/api/downloads', require('./routes/downloads'));
 
 // Health check
 app.get('/api/health', (req, res) => {

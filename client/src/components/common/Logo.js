@@ -82,7 +82,7 @@ const Logo = ({ size = 'md', showText = true, className = '' }) => {
       {/* School Name */}
       {showText && (
         <div className="text-center">
-          <h1 className={`font-bold ${config.text} leading-tight`}>
+          <h1 className={`font-bold ${config.text} leading-tight text-orange-500`}>
             Kandara Technical
           </h1>
           <p className="text-xs lg:text-sm opacity-80 mt-1">

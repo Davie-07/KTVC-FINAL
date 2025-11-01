@@ -9,7 +9,8 @@ import {
   MessageSquare,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -36,6 +37,40 @@ const Home = () => {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPerformance = async () => {
+    try {
+      const response = await axios.get('/api/downloads/student/performance', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Exam_Performance_${user.admissionNumber}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading performance data: ' + error.message);
+    }
+  };
+
+  const handleDownloadFees = async () => {
+    try {
+      const response = await axios.get('/api/downloads/student/fees', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Fee_History_${user.admissionNumber}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading fee history: ' + error.message);
     }
   };
 
@@ -174,6 +209,40 @@ const Home = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Download Data Section */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="flex items-center mb-6">
+          <Download className="text-blue-600 mr-3" size={28} />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Download My Data</h2>
+            <p className="text-sm text-gray-600">Export your academic records to Excel</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={handleDownloadPerformance}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg flex items-center justify-center transition"
+          >
+            <Download size={20} className="mr-2" />
+            Download Exam Performance
+          </button>
+          
+          <button
+            onClick={handleDownloadFees}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg flex items-center justify-center transition"
+          >
+            <Download size={20} className="mr-2" />
+            Download Fee Payment History
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          📊 <strong>Performance:</strong> Includes all exam scores, grades, and average performance<br/>
+          💰 <strong>Fee History:</strong> Includes all payment records, balances, and gatepass expiry dates
+        </p>
       </div>
 
       {/* Timetable */}

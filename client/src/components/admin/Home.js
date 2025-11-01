@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { BookOpen, Plus, Edit, Trash2, Users, CheckCircle, XCircle, Save, X } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, Users, CheckCircle, XCircle, Save, X, Download } from 'lucide-react';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -110,6 +110,40 @@ const Home = () => {
     }
   };
 
+  const handleDownloadTeachers = async () => {
+    try {
+      const response = await axios.get('/api/downloads/admin/teachers', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Teachers_Data_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading teachers data: ' + error.message);
+    }
+  };
+
+  const handleDownloadStaff = async () => {
+    try {
+      const response = await axios.get('/api/downloads/admin/staff', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Staff_Data_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading staff data: ' + error.message);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
       {/* Welcome Section */}
@@ -151,6 +185,39 @@ const Home = () => {
           </div>
         </div>
       )}
+
+      {/* Download Data Section */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="flex items-center mb-6">
+          <Download className="text-red-600 mr-3" size={28} />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Download Data</h2>
+            <p className="text-sm text-gray-600">Export data to Excel format</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={handleDownloadTeachers}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg flex items-center justify-center transition"
+          >
+            <Download size={20} className="mr-2" />
+            Download All Teachers Data
+          </button>
+          
+          <button
+            onClick={handleDownloadStaff}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg flex items-center justify-center transition"
+          >
+            <Download size={20} className="mr-2" />
+            Download All Staff Data
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          📊 Excel files include: Names, Emails, Account Codes/IDs, Status, and Date Joined
+        </p>
+      </div>
 
       {/* Course Management Section */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">

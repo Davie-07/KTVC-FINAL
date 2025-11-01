@@ -11,7 +11,8 @@ import {
   Trash2,
   CheckCircle,
   X,
-  Save
+  Save,
+  Download
 } from 'lucide-react';
 
 const Home = () => {
@@ -25,6 +26,7 @@ const Home = () => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentDetails, setStudentDetails] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState('');
 
   // Timetable form state
   const [timetableForm, setTimetableForm] = useState({
@@ -165,6 +167,24 @@ const Home = () => {
     }
   };
 
+  const handleDownloadStudentsData = async () => {
+    try {
+      const response = await axios.get('/api/downloads/teacher/students', {
+        params: { course: selectedCourse },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Students_Data_${selectedCourse || 'All'}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading students data: ' + error.message);
+    }
+  };
+
   const handleDeleteTimetable = async (id) => {
     if (window.confirm('Are you sure you want to delete this timetable?')) {
       try {
@@ -258,6 +278,47 @@ const Home = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Download Data Section */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="flex items-center mb-6">
+          <Download className="text-green-600 mr-3" size={28} />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Download Students Data</h2>
+            <p className="text-sm text-gray-600">Export student data with scores to Excel</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Course (Optional)</label>
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">All Courses</option>
+              {courses.map(course => (
+                <option key={course._id} value={course.name}>{course.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleDownloadStudentsData}
+              className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center justify-center transition"
+            >
+              <Download size={20} className="mr-2" />
+              Download Students Data
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          📊 Excel file includes: Admission No., Names, Emails, Courses, Levels, Phone Numbers, and Average Scores
+        </p>
       </div>
 
       {/* Timetable Section */}

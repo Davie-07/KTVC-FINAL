@@ -373,7 +373,7 @@ const Login = () => {
 
   // Main login form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-purple-700 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#3b3c36] to-[#002147] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Logo and Title */}
         <div className="text-center mb-8">
