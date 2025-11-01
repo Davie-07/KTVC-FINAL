@@ -83,7 +83,7 @@ router.post('/register-student', protect, authorize('enrollment'), async (req, r
     // Generate default password (will be changed on first login)
     const defaultPassword = `temp${admissionNumber}`;
 
-    // Create student account
+    // Create student account with 'pending' status (needs finance approval)
     const student = await User.create({
       firstName,
       lastName,
@@ -96,21 +96,26 @@ router.post('/register-student', protect, authorize('enrollment'), async (req, r
       level,
       countyOfBirth,
       dateOfBirth,
-      phone,
+      phoneNumber: phone,
       passwordSet: false,
       firstLogin: true,
+      registrationStatus: 'pending', // Awaiting finance approval
+      isActive: false, // Not active until fully approved
       createdBy: req.user._id
     });
 
-    // Send welcome notification
-    await Notification.create({
-      recipient: student._id,
-      sender: req.user._id,
-      type: 'enrollment',
-      title: 'Welcome to Our School!',
-      message: `Your student account has been created. Admission Number: ${admissionNumber}. Please login and set your password.`,
-      priority: 'high'
-    });
+    // Notify finance department about new student
+    const financeUsers = await User.find({ role: 'finance', isActive: true });
+    for (const financeUser of financeUsers) {
+      await Notification.create({
+        recipient: financeUser._id,
+        sender: req.user._id,
+        type: 'enrollment',
+        title: 'New Student Registration',
+        message: `New student ${student.name} (${admissionNumber}) has been enrolled and requires fee processing.`,
+        priority: 'high'
+      });
+    }
 
     res.status(201).json({
       success: true,

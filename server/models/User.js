@@ -79,7 +79,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     // Remove the inline index if you also have schema.index({ verificationCode: 1 })
     // index: true, <-- remove this line if schema.index(...) exists elsewhere
-  }
+  },
+  // Registration workflow for new students
+  registrationStatus: {
+    type: String,
+    enum: ['pending', 'finance-approved', 'teacher-approved', 'active'],
+    default: 'active' // Default for non-students, will be 'pending' for new students
+  },
+  phoneNumber: String // Additional phone number field
 }, {
   timestamps: true
 });

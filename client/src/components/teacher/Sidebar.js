@@ -9,7 +9,8 @@ import {
   Bot, 
   LogOut,
   Menu,
-  X
+  X,
+  UserPlus
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Logo from '../common/Logo';
@@ -26,6 +27,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   const menuItems = [
     { name: 'Home', icon: Home, path: '/teacher/home' },
+    { name: 'New Students', icon: UserPlus, path: '/teacher/new-students' },
     { name: 'Users', icon: Users, path: '/teacher/users' },
     { name: 'Management', icon: Settings, path: '/teacher/management' },
     { name: 'Services', icon: Briefcase, path: '/teacher/services' },

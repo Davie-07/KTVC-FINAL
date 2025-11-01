@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Briefcase, LogOut, Menu, X } from 'lucide-react';
+import { Home, Briefcase, LogOut, Menu, X, UserPlus } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Logo from '../common/Logo';
 
@@ -16,6 +16,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   const menuItems = [
     { name: 'Home', icon: Home, path: '/finance/home' },
+    { name: 'New Students', icon: UserPlus, path: '/finance/new-students' },
     { name: 'Services', icon: Briefcase, path: '/finance/services' }
   ];
 

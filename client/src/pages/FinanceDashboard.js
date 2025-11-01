@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import Sidebar from '../components/finance/Sidebar';
 import Home from '../components/finance/Home';
 import Services from '../components/finance/Services';
+import NewStudents from '../components/finance/NewStudents';
 
 const FinanceDashboard = () => {
   const { user, loading } = useContext(AuthContext);
@@ -31,6 +32,7 @@ const FinanceDashboard = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/finance/home" />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/new-students" element={<NewStudents />} />
           <Route path="/services" element={<Services />} />
         </Routes>
       </div>

@@ -65,6 +65,88 @@ router.get('/student/:id', protect, authorize('finance'), async (req, res) => {
   }
 });
 
+// @route   GET /api/finance/new-students
+// @desc    Get students pending finance approval
+// @access  Private/Finance
+router.get('/new-students', protect, authorize('finance'), async (req, res) => {
+  try {
+    const pendingStudents = await User.find({ 
+      role: 'student', 
+      registrationStatus: 'pending' 
+    })
+      .populate('course', 'name code')
+      .populate('createdBy', 'name')
+      .sort('-createdAt');
+
+    res.json(pendingStudents);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/finance/approve-student/:id
+// @desc    Approve student and create fee record (move to teacher approval)
+// @access  Private/Finance
+router.post('/approve-student/:id', protect, authorize('finance'), async (req, res) => {
+  try {
+    const { totalAmount, amountPaid, semester, academicYear, gatepassExpiryDate } = req.body;
+
+    const student = await User.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    if (student.registrationStatus !== 'pending') {
+      return res.status(400).json({ 
+        message: `Student is already ${student.registrationStatus}. Cannot process.`,
+        currentStatus: student.registrationStatus
+      });
+    }
+
+    // Calculate balance
+    const balance = totalAmount - amountPaid;
+
+    // Create fee record
+    const fee = await Fee.create({
+      student: student._id,
+      totalAmount,
+      amountPaid,
+      balance,
+      semester,
+      academicYear,
+      gatepassExpiryDate,
+      status: balance <= 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Unpaid',
+      createdBy: req.user._id
+    });
+
+    // Update student status to finance-approved
+    student.registrationStatus = 'finance-approved';
+    await student.save();
+
+    // Notify teacher department
+    const teachers = await User.find({ role: 'teacher', isActive: true });
+    for (const teacher of teachers) {
+      await Notification.create({
+        recipient: teacher._id,
+        sender: req.user._id,
+        type: 'enrollment',
+        title: 'New Student Requires Class Assignment',
+        message: `Student ${student.name} (${student.admissionNumber}) has completed fee processing and needs class assignment.`,
+        priority: 'high'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Student approved and forwarded to teacher department',
+      student,
+      fee
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   POST /api/finance/fee
 // @desc    Create or update fee record
 // @access  Private/Finance

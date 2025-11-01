@@ -81,6 +81,69 @@ router.get('/students', protect, authorize('teacher'), async (req, res) => {
   }
 });
 
+// @route   GET /api/teacher/new-students
+// @desc    Get students pending teacher approval (finance-approved)
+// @access  Private/Teacher
+router.get('/new-students', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const newStudents = await User.find({ 
+      role: 'student', 
+      registrationStatus: 'finance-approved' 
+    })
+      .populate('course', 'name code')
+      .populate('createdBy', 'name')
+      .sort('-createdAt');
+
+    res.json(newStudents);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/teacher/approve-student/:id
+// @desc    Approve student and activate account (final approval)
+// @access  Private/Teacher
+router.post('/approve-student/:id', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const student = await User.findById(req.params.id)
+      .populate('course', 'name code');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    if (student.registrationStatus !== 'finance-approved') {
+      return res.status(400).json({ 
+        message: `Student is ${student.registrationStatus}. Only finance-approved students can be activated.`,
+        currentStatus: student.registrationStatus
+      });
+    }
+
+    // Final activation
+    student.registrationStatus = 'active';
+    student.isActive = true;
+    await student.save();
+
+    // Send welcome notification to student
+    await Notification.create({
+      recipient: student._id,
+      sender: req.user._id,
+      type: 'enrollment',
+      title: 'Account Activated - Welcome!',
+      message: `Your student account has been fully activated. Admission Number: ${student.admissionNumber}. You can now access all system features. Please login and set your password.`,
+      priority: 'high'
+    });
+
+    res.json({
+      success: true,
+      message: 'Student account activated successfully',
+      student
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   GET /api/teacher/student/:id
 // @desc    Get specific student details with units
 // @access  Private/Teacher

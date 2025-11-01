@@ -8,6 +8,7 @@ import Management from '../components/teacher/Management';
 import Services from '../components/teacher/Services';
 import Notifications from '../components/teacher/Notifications';
 import DeeAI from '../components/teacher/DeeAI';
+import NewStudents from '../components/teacher/NewStudents';
 
 const TeacherDashboard = () => {
   const { user, loading } = useContext(AuthContext);
@@ -35,6 +36,7 @@ const TeacherDashboard = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/teacher/home" />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/new-students" element={<NewStudents />} />
           <Route path="/users" element={<Users />} />
           <Route path="/management" element={<Management />} />
           <Route path="/services" element={<Services />} />
