@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
+import axios from '../services/axios';
 import { ShieldCheck, X, AlertCircle, CheckCircle, XCircle, Clock, LogOut } from 'lucide-react';
 
 const GateDashboard = () => {
@@ -29,9 +29,11 @@ const GateDashboard = () => {
   const fetchTodayVerifications = async () => {
     try {
       const response = await axios.get('/api/gate/verifications/today');
-      setTodayVerifications(response.data);
+      // Ensure response.data is an array
+      setTodayVerifications(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching verifications:', error);
+      setTodayVerifications([]); // Set to empty array on error
     }
   };
 
@@ -288,7 +290,7 @@ const GateDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {todayVerifications.map((verification) => (
+                  {(Array.isArray(todayVerifications) ? todayVerifications : []).map((verification) => (
                     <tr key={verification._id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm">{verification.verificationTime}</td>
                       <td className="px-4 py-3 text-sm font-medium">{verification.admissionNumber}</td>
