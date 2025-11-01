@@ -4,7 +4,7 @@ const xl = require('excel4node');
 const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Fee = require('../models/Fee');
-const Grade = require('../models/Grade');
+const Performance = require('../models/Performance');
 
 // Utility function to create Excel workbook
 const createWorkbook = () => {
@@ -146,11 +146,11 @@ router.get('/teacher/students', protect, authorize('teacher'), async (req, res) 
       .select('name admissionNumber email course level phoneNumber')
       .sort('name');
 
-    // Get grades for students
+    // Get performance records for students
     const studentIds = students.map(s => s._id);
-    const grades = await Grade.find({ student: { $in: studentIds } })
-      .populate('exam', 'title')
-      .select('student exam score grade');
+    const performances = await Performance.find({ student: { $in: studentIds } })
+      .populate('unit', 'name')
+      .select('student totalScore grade');
 
     const { wb, headerStyle, cellStyle } = createWorkbook();
     const ws = wb.addWorksheet('Students');
@@ -164,9 +164,9 @@ router.get('/teacher/students', protect, authorize('teacher'), async (req, res) 
     // Data
     students.forEach((student, rowIndex) => {
       const row = rowIndex + 2;
-      const studentGrades = grades.filter(g => g.student.toString() === student._id.toString());
-      const avgScore = studentGrades.length > 0 
-        ? (studentGrades.reduce((sum, g) => sum + g.score, 0) / studentGrades.length).toFixed(2)
+      const studentPerformances = performances.filter(p => p.student.toString() === student._id.toString());
+      const avgScore = studentPerformances.length > 0 
+        ? (studentPerformances.reduce((sum, p) => sum + (p.totalScore || 0), 0) / studentPerformances.length).toFixed(2)
         : 'N/A';
 
       ws.cell(row, 1).string(student.admissionNumber || '').style(cellStyle);
@@ -283,9 +283,8 @@ router.get('/student/performance', protect, authorize('student'), async (req, re
   try {
     const studentId = req.user._id;
     
-    const grades = await Grade.find({ student: studentId })
-      .populate('exam', 'title date totalMarks')
-      .populate('course', 'name')
+    const performances = await Performance.find({ student: studentId })
+      .populate('unit', 'name code')
       .sort('-createdAt');
 
     const { wb, headerStyle, cellStyle } = createWorkbook();
@@ -298,36 +297,34 @@ router.get('/student/performance', protect, authorize('student'), async (req, re
     ws.cell(2, 2).string(req.user.admissionNumber).style(cellStyle);
 
     // Headers (starting from row 4)
-    const headers = ['Exam Title', 'Course', 'Score', 'Total Marks', 'Grade', 'Date'];
+    const headers = ['Unit', 'Total Score', 'Grade', 'Semester', 'Academic Year'];
     headers.forEach((header, i) => {
       ws.cell(4, i + 1).string(header).style(headerStyle);
     });
 
     // Data
-    grades.forEach((grade, rowIndex) => {
+    performances.forEach((performance, rowIndex) => {
       const row = rowIndex + 5;
-      ws.cell(row, 1).string(grade.exam?.title || 'N/A').style(cellStyle);
-      ws.cell(row, 2).string(grade.course?.name || 'N/A').style(cellStyle);
-      ws.cell(row, 3).number(grade.score || 0).style(cellStyle);
-      ws.cell(row, 4).number(grade.exam?.totalMarks || 0).style(cellStyle);
-      ws.cell(row, 5).string(grade.grade || 'N/A').style(cellStyle);
-      ws.cell(row, 6).string(grade.exam?.date ? new Date(grade.exam.date).toLocaleDateString() : 'N/A').style(cellStyle);
+      ws.cell(row, 1).string(performance.unit?.name || 'N/A').style(cellStyle);
+      ws.cell(row, 2).number(performance.totalScore || 0).style(cellStyle);
+      ws.cell(row, 3).string(performance.grade || 'N/A').style(cellStyle);
+      ws.cell(row, 4).string(performance.semester || 'N/A').style(cellStyle);
+      ws.cell(row, 5).string(performance.academicYear || 'N/A').style(cellStyle);
     });
 
     // Calculate average
-    if (grades.length > 0) {
-      const avgScore = (grades.reduce((sum, g) => sum + g.score, 0) / grades.length).toFixed(2);
-      ws.cell(grades.length + 6, 1).string('Average Score:').style(headerStyle);
-      ws.cell(grades.length + 6, 2).string(avgScore).style(cellStyle);
+    if (performances.length > 0) {
+      const avgScore = (performances.reduce((sum, p) => sum + (p.totalScore || 0), 0) / performances.length).toFixed(2);
+      ws.cell(performances.length + 6, 1).string('Average Score:').style(headerStyle);
+      ws.cell(performances.length + 6, 2).string(avgScore).style(cellStyle);
     }
 
     // Set column widths
-    ws.column(1).setWidth(30);
-    ws.column(2).setWidth(30);
+    ws.column(1).setWidth(40);
+    ws.column(2).setWidth(15);
     ws.column(3).setWidth(12);
-    ws.column(4).setWidth(15);
-    ws.column(5).setWidth(10);
-    ws.column(6).setWidth(15);
+    ws.column(4).setWidth(18);
+    ws.column(5).setWidth(18);
 
     const fileName = `Exam_Performance_${req.user.admissionNumber}_${Date.now()}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
