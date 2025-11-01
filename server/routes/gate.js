@@ -85,7 +85,7 @@ router.post('/verify', protect, authorize('gate', 'gateverification'), async (re
       if (!receipt) {
         const code = generateVerificationCode();
         const expiresAt = new Date();
-        expiresAt.setHours(23, 59, 59, 999); // Expires at end of day
+        expiresAt.setHours(expiresAt.getHours() + 2); // Expires in 2 hours
 
         receipt = await VerificationReceipt.create({
           student: student._id,
@@ -95,12 +95,17 @@ router.post('/verify', protect, authorize('gate', 'gateverification'), async (re
         });
 
         // Send notification to student with the code
+        const expiryTime = expiresAt.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
         await Notification.create({
           recipient: student._id,
           sender: req.user._id,
           type: 'gatepass',
           title: 'Gate Verification Code Required',
-          message: `SECURITY ALERT: Your admission number has been used for verification multiple times today. Your verification code is: ${code}. This code is valid until end of day. If you did not request this, please contact security.`,
+          message: `SECURITY ALERT: Your admission number has been used for verification multiple times today. Your verification code is: ${code}. This code expires at ${expiryTime} (2 hours). If you did not request this, please contact security immediately.`,
           priority: 'high'
         });
       }
@@ -126,14 +131,13 @@ router.post('/verify', protect, authorize('gate', 'gateverification'), async (re
       if (!receipt) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid or expired verification code'
+          message: 'Invalid or expired verification code. The code may have expired (2 hours) or already been used.'
         });
       }
 
-      // Mark code as used
-      receipt.isUsed = true;
-      receipt.usedAt = new Date();
-      await receipt.save();
+      // Delete the receipt after successful use (security best practice)
+      await VerificationReceipt.findByIdAndDelete(receipt._id);
+      console.log(`Verification code used and deleted for admission ${admissionNumber}`);
     }
 
     // Get student's fee information
@@ -352,5 +356,51 @@ router.get('/dashboard', protect, authorize('gate', 'gateverification'), async (
     res.status(500).json({ message: error.message });
   }
 });
+
+// @route   DELETE /api/gate/cleanup-receipts
+// @desc    Clean up expired verification receipts (can be called manually or scheduled)
+// @access  Private/Gate
+router.delete('/cleanup-receipts', protect, authorize('gate', 'gateverification'), async (req, res) => {
+  try {
+    const now = new Date();
+    
+    // Delete all expired receipts
+    const result = await VerificationReceipt.deleteMany({
+      expiresAt: { $lt: now }
+    });
+
+    console.log(`Cleaned up ${result.deletedCount} expired verification receipts`);
+    
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} expired verification receipt(s)`
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Automatic cleanup function - runs every hour
+const cleanupExpiredReceipts = async () => {
+  try {
+    const now = new Date();
+    const result = await VerificationReceipt.deleteMany({
+      expiresAt: { $lt: now }
+    });
+    
+    if (result.deletedCount > 0) {
+      console.log(`[Auto-Cleanup] Deleted ${result.deletedCount} expired verification receipts at ${now.toLocaleString()}`);
+    }
+  } catch (error) {
+    console.error('[Auto-Cleanup] Error cleaning up receipts:', error);
+  }
+};
+
+// Run cleanup every hour (3600000 ms)
+setInterval(cleanupExpiredReceipts, 3600000);
+
+// Run cleanup immediately on server start
+cleanupExpiredReceipts();
 
 module.exports = router;

@@ -242,7 +242,7 @@ const GateDashboard = () => {
                 <div className="flex items-start mb-3">
                   <AlertCircle className="text-yellow-600 mr-2 flex-shrink-0" size={20} />
                   <p className="text-sm text-yellow-800">
-                    <strong>Security Check Required:</strong> This admission has been verified twice today already. For security, a 6-digit verification code has been sent to the student's dashboard. Please ask the student for the code to confirm their identity.
+                    <strong>Security Check Required:</strong> This admission has been verified twice today already. For security, a 6-digit verification code has been sent to the student's dashboard. The code is valid for 2 hours. Please ask the student for the code to confirm their identity.
                   </p>
                 </div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
