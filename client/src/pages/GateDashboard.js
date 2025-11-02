@@ -2,10 +2,11 @@ import React, { useState, useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axios from '../services/axios';
-import { ShieldCheck, X, AlertCircle, CheckCircle, XCircle, Clock, LogOut } from 'lucide-react';
+import { ShieldCheck, X, AlertCircle, CheckCircle, XCircle, Clock, LogOut, Database, Download, Lock } from 'lucide-react';
 
 const GateDashboard = () => {
   const { user, loading, logout } = useContext(AuthContext);
+  const [activeTab, setActiveTab] = useState('verify');
   const [formData, setFormData] = useState({
     admissionNumber: '',
     course: '',
@@ -18,12 +19,59 @@ const GateDashboard = () => {
   const [error, setError] = useState('');
   const [todayVerifications, setTodayVerifications] = useState([]);
   const [stats, setStats] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isDataUnlocked, setIsDataUnlocked] = useState(false);
+  const [timeStatus, setTimeStatus] = useState({ isOpen: true, message: '', countdown: '' });
+
+  // Check if gate is open (Monday-Friday, 6am-5:20pm)
+  React.useEffect(() => {
+    const checkTimeStatus = () => {
+      const now = new Date();
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const currentMinutes = hours * 60 + minutes;
+      
+      // Operating hours: 6:00 AM (360 mins) to 5:20 PM (1040 mins)
+      const openTime = 6 * 60; // 6:00 AM
+      const closeTime = 17 * 60 + 20; // 5:20 PM
+      
+      // Check if it's Monday-Friday (1-5) and within operating hours
+      const isWeekday = day >= 1 && day <= 5;
+      const isDuringHours = currentMinutes >= openTime && currentMinutes < closeTime;
+      const isOpen = isWeekday && isDuringHours;
+      
+      let message = '';
+      let countdown = '';
+      
+      if (!isWeekday) {
+        message = 'Gate verification is only available Monday to Friday';
+        const daysUntilMonday = day === 0 ? 1 : (8 - day); // Days until next Monday
+        countdown = `Opens in ${daysUntilMonday} day${daysUntilMonday > 1 ? 's' : ''} (Monday 6:00 AM)`;
+      } else if (currentMinutes < openTime) {
+        const minsUntilOpen = openTime - currentMinutes;
+        const hoursLeft = Math.floor(minsUntilOpen / 60);
+        const minsLeft = minsUntilOpen % 60;
+        message = 'Gate verification opens at 6:00 AM';
+        countdown = `Opens in ${hoursLeft}h ${minsLeft}m`;
+      } else if (currentMinutes >= closeTime) {
+        message = 'Gate verification closed for today';
+        countdown = 'Opens tomorrow at 6:00 AM';
+      }
+      
+      setTimeStatus({ isOpen, message, countdown });
+    };
+    
+    checkTimeStatus();
+    const interval = setInterval(checkTimeStatus, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   React.useEffect(() => {
-    console.log('Gate Dashboard - User:', user);
-    console.log('Gate Dashboard - Loading:', loading);
     if (user && (user.role === 'gate' || user.role === 'gateverification')) {
-      console.log('Fetching gate dashboard data...');
       fetchTodayVerifications();
       fetchStats();
     }
@@ -130,6 +178,55 @@ const GateDashboard = () => {
     window.location.href = '/login';
   };
 
+  const handleDataTabClick = () => {
+    if (!isDataUnlocked) {
+      setShowPasswordModal(true);
+    } else {
+      setActiveTab('data');
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    
+    try {
+      // Verify password by attempting login
+      const response = await axios.post('/api/auth/login', {
+        identifier: user.accountId,
+        password: passwordInput
+      });
+      
+      if (response.data) {
+        setIsDataUnlocked(true);
+        setShowPasswordModal(false);
+        setPasswordInput('');
+        setActiveTab('data');
+      }
+    } catch (error) {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+
+  const handleDownloadData = async () => {
+    try {
+      const response = await axios.get('/api/gate/download-verifications', {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const date = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `gate-verifications-${date}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error downloading data: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   console.log('Gate Dashboard Render - Loading:', loading, 'User:', user);
 
   if (loading) {
@@ -201,7 +298,54 @@ const GateDashboard = () => {
           </div>
         )}
 
-        {/* Verification Form */}
+        {/* Tabs */}
+        <div className="bg-white rounded-t-xl shadow-md mb-0">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('verify')}
+              className={`flex-1 px-6 py-4 font-semibold transition ${
+                activeTab === 'verify'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <ShieldCheck className="inline mr-2" size={20} />
+              Verify Student
+            </button>
+            <button
+              onClick={handleDataTabClick}
+              className={`flex-1 px-6 py-4 font-semibold transition ${
+                activeTab === 'data'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Database className="inline mr-2" size={20} />
+              Verified Data {!isDataUnlocked && <Lock className="inline ml-1" size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Verification Form Tab */}
+        {activeTab === 'verify' && (
+          <>
+            {/* Time Restriction Notice */}
+            {!timeStatus.isOpen && (
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-b-xl p-6 mb-6 shadow-md">
+                <div className="flex items-start">
+                  <Clock className="text-red-600 mr-3 flex-shrink-0 mt-1" size={24} />
+                  <div>
+                    <h3 className="text-lg font-bold text-red-800 mb-2">{timeStatus.message}</h3>
+                    <p className="text-red-700 font-semibold">{timeStatus.countdown}</p>
+                    <p className="text-sm text-red-600 mt-2">
+                      Operating Hours: Monday - Friday, 6:00 AM - 5:20 PM
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Verification Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <ShieldCheck className="mr-3 text-green-600" size={28} />
@@ -217,8 +361,9 @@ const GateDashboard = () => {
                 type="text"
                 value={formData.admissionNumber}
                 onChange={(e) => setFormData({ ...formData, admissionNumber: e.target.value.toUpperCase() })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg"
-                placeholder="e.g., STD001"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="e.g., KTVC/25J/1234"
+                disabled={!timeStatus.isOpen}
                 required
               />
             </div>
@@ -231,8 +376,9 @@ const GateDashboard = () => {
                 type="text"
                 value={formData.course}
                 onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="e.g., Diploma in Information Technology"
+                disabled={!timeStatus.isOpen}
                 required
               />
             </div>
@@ -270,13 +416,18 @@ const GateDashboard = () => {
 
             <button
               type="submit"
-              disabled={verifying}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition duration-200 disabled:opacity-50 flex items-center justify-center text-lg"
+              disabled={verifying || !timeStatus.isOpen}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-lg"
             >
               {verifying ? (
                 <>
                   <Clock className="animate-spin mr-2" size={24} />
                   Verifying...
+                </>
+              ) : !timeStatus.isOpen ? (
+                <>
+                  <Clock className="mr-2" size={24} />
+                  Closed
                 </>
               ) : (
                 <>
@@ -287,13 +438,25 @@ const GateDashboard = () => {
             </button>
           </form>
         </div>
+          </>
+        )}
 
-        {/* Today's Verifications */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Today's Verifications</h3>
-          
-          {todayVerifications.length > 0 ? (
-            <div className="overflow-x-auto">
+        {/* Data Tab */}
+        {activeTab === 'data' && isDataUnlocked && (
+          <div className="bg-white rounded-b-xl shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Verified Students Data</h3>
+              <button
+                onClick={handleDownloadData}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center transition"
+              >
+                <Download size={20} className="mr-2" />
+                Download Excel
+              </button>
+            </div>
+            
+            {todayVerifications.length > 0 ? (
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100">
                   <tr>
@@ -334,7 +497,56 @@ const GateDashboard = () => {
           ) : (
             <p className="text-gray-500 text-center py-8">No verifications today</p>
           )}
+          </div>
+        )}
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="flex items-center mb-4">
+              <Lock className="text-green-600 mr-3" size={32} />
+              <h3 className="text-2xl font-bold text-gray-800">Password Required</h3>
+            </div>
+            <p className="text-gray-600 mb-6">Enter your login password to access verified data.</p>
+            
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                placeholder="Enter password"
+                required
+              />
+              
+              {passwordError && (
+                <p className="text-red-600 text-sm">{passwordError}</p>
+              )}
+              
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition"
+                >
+                  Unlock
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordInput('');
+                    setPasswordError('');
+                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+      )}
       </div>
 
       {/* Popup Modal */}

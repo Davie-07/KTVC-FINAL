@@ -6,6 +6,7 @@ const Fee = require('../models/Fee');
 const GateVerification = require('../models/GateVerification');
 const VerificationReceipt = require('../models/VerificationReceipt');
 const Notification = require('../models/Notification');
+const excel = require('excel4node');
 
 // Helper function to generate 6-digit code
 const generateVerificationCode = () => {
@@ -376,6 +377,70 @@ router.delete('/cleanup-receipts', protect, authorize('gate', 'gateverification'
       deletedCount: result.deletedCount,
       message: `Deleted ${result.deletedCount} expired verification receipt(s)`
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/gate/download-verifications
+// @desc    Download all gate verifications as Excel
+// @access  Private/Gate
+router.get('/download-verifications', protect, authorize('gateverification', 'gate'), async (req, res) => {
+  try {
+    const verifications = await GateVerification.find()
+      .populate('student', 'name admissionNumber')
+      .populate({
+        path: 'student',
+        populate: { path: 'course', select: 'name' }
+      })
+      .sort('-createdAt')
+      .limit(5000); // Last 5000 records
+
+    const wb = new excel.Workbook();
+    const ws = wb.addWorksheet('Gate Verifications');
+
+    // Styles
+    const headerStyle = wb.createStyle({
+      font: { bold: true, size: 12 },
+      fill: { type: 'pattern', patternType: 'solid', fgColor: '22C55E' },
+      alignment: { horizontal: 'center' }
+    });
+
+    const cellStyle = wb.createStyle({
+      alignment: { horizontal: 'left' }
+    });
+
+    // Headers
+    const headers = ['Date', 'Time', 'Admission No.', 'Student Name', 'Course', 'Status', 'Expiry Date'];
+    headers.forEach((header, i) => {
+      ws.cell(1, i + 1).string(header).style(headerStyle);
+    });
+
+    // Column widths
+    ws.column(1).setWidth(15);
+    ws.column(2).setWidth(12);
+    ws.column(3).setWidth(20);
+    ws.column(4).setWidth(30);
+    ws.column(5).setWidth(40);
+    ws.column(6).setWidth(12);
+    ws.column(7).setWidth(15);
+
+    // Data
+    verifications.forEach((v, idx) => {
+      const row = idx + 2;
+      ws.cell(row, 1).string(new Date(v.createdAt).toLocaleDateString()).style(cellStyle);
+      ws.cell(row, 2).string(v.verificationTime || '').style(cellStyle);
+      ws.cell(row, 3).string(v.admissionNumber || '').style(cellStyle);
+      ws.cell(row, 4).string(v.student?.name || 'N/A').style(cellStyle);
+      ws.cell(row, 5).string(v.student?.course?.name || 'N/A').style(cellStyle);
+      ws.cell(row, 6).string(v.status || '').style(cellStyle);
+      ws.cell(row, 7).string(v.expiryDate ? new Date(v.expiryDate).toLocaleDateString() : 'N/A').style(cellStyle);
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=gate-verifications-${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    wb.write('GateVerifications.xlsx', res);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

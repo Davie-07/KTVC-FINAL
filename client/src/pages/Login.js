@@ -30,7 +30,7 @@ const Login = () => {
   const getLoginHelper = () => {
     if (!identifier) return 'Enter your ID or Admission Number';
     
-    if (/^STD/.test(identifier)) return 'Student Login - Enter your course below';
+    if (/^KTVC\//.test(identifier)) return 'Student Login - Enter your course below';
     if (identifier.length === 6 && /^\d+$/.test(identifier)) return 'Teacher Login (6-digit code)';
     if (identifier.length === 5 && /^\d+$/.test(identifier)) return 'Gate Verification Login (5-digit ID)';
     if (identifier.length === 7 && /^\d+$/.test(identifier)) return 'Finance Login (7-digit ID)';
@@ -67,7 +67,7 @@ const Login = () => {
 
     try {
       // For students, check if they need password setup first
-      if (/^STD/.test(identifier) && course) {
+      if (/^KTVC\//.test(identifier) && course) {
         const checkResponse = await axios.post('/api/auth/check-student', {
           admissionNumber: identifier,
           course
@@ -90,8 +90,8 @@ const Login = () => {
 
       // Store user data and token
       const userData = response.data;
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', userData.token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', userData.token);
       login(userData);
 
       // Configure axios defaults after successful login
@@ -219,7 +219,7 @@ const Login = () => {
                 value={forgotPasswordData.admissionNumber}
                 onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, admissionNumber: e.target.value.toUpperCase() })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                placeholder="Enter admission number (e.g., STD2024001)"
+                placeholder="Enter admission number (e.g., KTVC/25J/1234)"
                 required
               />
             </div>
@@ -420,7 +420,7 @@ const Login = () => {
           </div>
 
           {/* Show course field for student login */}
-          {/^STD/.test(identifier) && (
+          {/^KTVC\//.test(identifier) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
               <input

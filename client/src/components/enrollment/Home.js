@@ -278,7 +278,9 @@ const Home = () => {
               value={formData.admissionNumber}
               onChange={(e) => setFormData({ ...formData, admissionNumber: e.target.value.toUpperCase() })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              placeholder="e.g., STD20240001"
+              placeholder="e.g., KTVC/25J/1234"
+              pattern="KTVC/\d{2}[A-Z]/\d{4}"
+              title="Format: KTVC/25J/1234"
               required
             />
             <p className="text-xs text-gray-600 mt-1">

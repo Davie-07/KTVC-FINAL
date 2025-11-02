@@ -106,8 +106,8 @@ router.post('/login', async (req, res) => {
     let user;
     let query = {};
 
-    if (/^STD/.test(identifier)) {
-      // Student login
+    if (/^KTVC\//.test(identifier)) {
+      // Student login (new format: KTVC/25J/1234)
       query = { admissionNumber: identifier, role: 'student' };
     } else if (identifier.length === 6 && /^\d+$/.test(identifier)) {
       // Teacher login
