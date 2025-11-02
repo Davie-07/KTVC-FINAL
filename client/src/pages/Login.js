@@ -66,15 +66,27 @@ const Login = () => {
     setLoading(true);
 
     try {
-      console.log('Login attempt:', { identifier, password, course });
+      // For students, check if they need password setup first
+      if (/^STD/.test(identifier) && course) {
+        const checkResponse = await axios.post('/api/auth/check-student', {
+          admissionNumber: identifier,
+          course
+        });
+
+        if (checkResponse.data.needsPasswordSetup) {
+          // Show password setup form
+          setUserId(checkResponse.data.studentId);
+          setShowPasswordSetup(true);
+          setLoading(false);
+          return;
+        }
+      }
 
       const response = await axios.post('/api/auth/login', {
         identifier,
         password: password || undefined,
         course: course || undefined
       });
-
-      console.log('Login response:', response.data);
 
       // Store user data and token
       const userData = response.data;
@@ -112,7 +124,6 @@ const Login = () => {
           navigate('/');
       }
     } catch (error) {
-      console.error('Login error:', error.response?.data || error);
       setError(error.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);

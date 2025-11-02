@@ -11,6 +11,13 @@ const Management = () => {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [assignmentForm, setAssignmentForm] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newAssignmentForm, setNewAssignmentForm] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    totalMarks: ''
+  });
 
   useEffect(() => {
     fetchAssignments();
@@ -102,6 +109,27 @@ const Management = () => {
     }
   };
 
+  const handleCreateAssignment = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/teacher/assignments', {
+        ...newAssignmentForm,
+        deadline: new Date(newAssignmentForm.deadline)
+      });
+      alert('Assignment created successfully!');
+      setShowCreateForm(false);
+      setNewAssignmentForm({
+        title: '',
+        description: '',
+        deadline: '',
+        totalMarks: ''
+      });
+      fetchAssignments();
+    } catch (error) {
+      alert('Error creating assignment: ' + error.response?.data?.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -151,7 +179,85 @@ const Management = () => {
         {/* Assignments Tab */}
         {activeTab === 'assignments' && (
           <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Manage Assignments</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Manage Assignments</h2>
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center transition"
+              >
+                {showCreateForm ? <X size={20} className="mr-2" /> : <FileText size={20} className="mr-2" />}
+                {showCreateForm ? 'Cancel' : 'Create Assignment'}
+              </button>
+            </div>
+
+            {/* Create Assignment Form */}
+            {showCreateForm && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Create New Assignment</h3>
+                <form onSubmit={handleCreateAssignment} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newAssignmentForm.title}
+                      onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={newAssignmentForm.description}
+                      onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      rows="3"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Deadline <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={newAssignmentForm.deadline}
+                        onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, deadline: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Total Marks <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={newAssignmentForm.totalMarks}
+                        onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, totalMarks: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition"
+                  >
+                    Create Assignment
+                  </button>
+                </form>
+              </div>
+            )}
             
             {assignments.length > 0 ? (
               <div className="space-y-4">

@@ -51,6 +51,51 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/check-student
+// @desc    Check if new student needs password setup
+// @access  Public
+router.post('/check-student', async (req, res) => {
+  try {
+    const { admissionNumber, course } = req.body;
+
+    const user = await User.findOne({ 
+      admissionNumber, 
+      role: 'student' 
+    }).populate('course');
+
+    if (!user) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Check course match
+    if (course) {
+      const courseMatch = user.course && 
+        (user.course.name.toLowerCase() === course.toLowerCase() || 
+         user.course.code.toLowerCase() === course.toLowerCase());
+      
+      if (!courseMatch) {
+        return res.status(400).json({ message: 'Course does not match student records' });
+      }
+    }
+
+    // Check if this is a newly enrolled student (activated by teacher) who needs password setup
+    const needsPasswordSetup = 
+      user.registrationStatus === 'active' && 
+      !user.passwordSet && 
+      user.firstLogin;
+
+    res.json({
+      needsPasswordSetup,
+      studentId: user._id,
+      studentName: user.name,
+      isActive: user.isActive
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   POST /api/auth/login
 // @desc    Unified login for all roles
 // @access  Public
@@ -132,7 +177,6 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 });
