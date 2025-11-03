@@ -9,13 +9,17 @@ const GateReceipt = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchGatepass();
-  }, []);
+    if (user?.admissionNumber) {
+      fetchGatepass();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.admissionNumber]);
 
   const fetchGatepass = async () => {
     try {
       // Fetch verification receipts from the gate API
-      const response = await axios.get(`/api/gate/student/${user.admissionNumber}/receipts`);
+      // URL encode the admission number to handle slashes in KTVC/25J/1600 format
+      const response = await axios.get(`/api/gate/student/${encodeURIComponent(user.admissionNumber)}/receipts`);
       
       if (response.data && response.data.length > 0) {
         // Get the most recent receipt

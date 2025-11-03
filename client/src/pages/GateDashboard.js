@@ -377,10 +377,13 @@ const GateDashboard = () => {
                 value={formData.course}
                 onChange={(e) => setFormData({ ...formData, course: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="e.g., Diploma in Information Technology"
+                placeholder="e.g., DIT or Diploma in Information Technology"
                 disabled={!timeStatus.isOpen}
                 required
               />
+              <p className="text-xs text-gray-600 mt-1">
+                Enter course code (DIT) or full course name
+              </p>
             </div>
 
             {requiresCode && (

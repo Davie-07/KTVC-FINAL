@@ -47,8 +47,12 @@ router.post('/verify', protect, authorize('gate', 'gateverification'), async (re
       });
     }
 
-    // Check if course matches
-    if (student.course.name !== course && student.course.code !== course) {
+    // Check if course matches (case-insensitive)
+    const courseMatch = student.course && 
+      (student.course.name.toLowerCase() === course.toLowerCase() || 
+       student.course.code.toLowerCase() === course.toLowerCase());
+    
+    if (!courseMatch) {
       return res.status(400).json({ 
         success: false,
         message: 'Course does not match student records' 

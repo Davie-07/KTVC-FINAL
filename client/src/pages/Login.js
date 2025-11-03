@@ -30,7 +30,7 @@ const Login = () => {
   const getLoginHelper = () => {
     if (!identifier) return 'Enter your ID or Admission Number';
     
-    if (/^KTVC\//.test(identifier)) return 'Student Login - Enter your course below';
+    if (/^KTVC\//.test(identifier)) return 'Student Login - Enter course code (e.g., DIT) or full name';
     if (identifier.length === 6 && /^\d+$/.test(identifier)) return 'Teacher Login (6-digit code)';
     if (identifier.length === 5 && /^\d+$/.test(identifier)) return 'Gate Verification Login (5-digit ID)';
     if (identifier.length === 7 && /^\d+$/.test(identifier)) return 'Finance Login (7-digit ID)';
@@ -233,9 +233,12 @@ const Login = () => {
                 value={forgotPasswordData.course}
                 onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, course: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                placeholder="Enter course name"
+                placeholder="Enter course code (e.g., DIT) or full name"
                 required
               />
+              <p className="text-xs text-gray-600 mt-1">
+                You can use course code or full course name
+              </p>
             </div>
 
             <div>
@@ -428,9 +431,12 @@ const Login = () => {
                 value={course}
                 onChange={(e) => setCourse(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                placeholder="Enter your course name"
+                placeholder="Enter course code (e.g., DIT) or full name"
                 required
               />
+              <p className="text-xs text-gray-600 mt-1">
+                You can use course code (DIT) or full course name (Diploma in Information Technology)
+              </p>
             </div>
           )}
 
