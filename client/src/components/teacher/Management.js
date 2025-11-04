@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
-import { Settings, FileText, GraduationCap, Trash2, Edit, Save, X } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { Settings, FileText, GraduationCap, Trash2, Edit, Save, X, BookOpen, Plus } from 'lucide-react';
 
 const Management = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('assignments');
   const [assignments, setAssignments] = useState([]);
   const [students, setStudents] = useState([]);
@@ -18,10 +20,23 @@ const Management = () => {
     deadline: '',
     totalMarks: ''
   });
+  
+  // Units state
+  const [units, setUnits] = useState([]);
+  const [showUnitForm, setShowUnitForm] = useState(false);
+  const [editingUnit, setEditingUnit] = useState(null);
+  const [unitForm, setUnitForm] = useState({
+    name: '',
+    code: '',
+    credits: '',
+    description: ''
+  });
+  const [confirmDeleteUnit, setConfirmDeleteUnit] = useState(null);
 
   useEffect(() => {
     fetchAssignments();
     fetchStudents();
+    fetchUnits();
   }, []);
 
   const fetchAssignments = async () => {
@@ -116,7 +131,7 @@ const Management = () => {
         ...newAssignmentForm,
         deadline: new Date(newAssignmentForm.deadline)
       });
-      alert('Assignment created successfully!');
+      showToast('Assignment created successfully!', 'success');
       setShowCreateForm(false);
       setNewAssignmentForm({
         title: '',
@@ -126,8 +141,63 @@ const Management = () => {
       });
       fetchAssignments();
     } catch (error) {
-      alert('Error creating assignment: ' + error.response?.data?.message);
+      showToast(error.response?.data?.message || 'Error creating assignment', 'error');
     }
+  };
+
+  // Units Management Functions
+  const fetchUnits = async () => {
+    try {
+      const response = await axios.get('/api/teacher/units');
+      setUnits(response.data);
+    } catch (error) {
+      console.error('Error fetching units:', error);
+    }
+  };
+
+  const handleUnitSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingUnit) {
+        await axios.put(`/api/teacher/units/${editingUnit._id}`, unitForm);
+        showToast('Unit updated successfully!', 'success');
+      } else {
+        await axios.post('/api/teacher/units', unitForm);
+        showToast('Unit created successfully!', 'success');
+      }
+      setShowUnitForm(false);
+      setEditingUnit(null);
+      setUnitForm({ name: '', code: '', credits: '', description: '' });
+      fetchUnits();
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Error saving unit', 'error');
+    }
+  };
+
+  const handleEditUnit = (unit) => {
+    setEditingUnit(unit);
+    setUnitForm({
+      name: unit.name,
+      code: unit.code,
+      credits: unit.credits || '',
+      description: unit.description || ''
+    });
+    setShowUnitForm(true);
+  };
+
+  const handleDeleteUnit = (unitId) => {
+    setConfirmDeleteUnit(unitId);
+  };
+
+  const confirmDeleteUnitAction = async () => {
+    try {
+      await axios.delete(`/api/teacher/units/${confirmDeleteUnit}`);
+      showToast('Unit deleted successfully!', 'success');
+      fetchUnits();
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Error deleting unit', 'error');
+    }
+    setConfirmDeleteUnit(null);
   };
 
   if (loading) {
@@ -173,6 +243,17 @@ const Management = () => {
           >
             <GraduationCap className="inline mr-2" size={20} />
             Exam Scores
+          </button>
+          <button
+            onClick={() => setActiveTab('units')}
+            className={`flex-1 px-6 py-4 font-semibold transition ${
+              activeTab === 'units'
+                ? 'bg-orange-500 text-white'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <BookOpen className="inline mr-2" size={20} />
+            Units
           </button>
         </div>
 
@@ -457,7 +538,194 @@ const Management = () => {
             )}
           </div>
         )}
+
+        {/* Units Tab */}
+        {activeTab === 'units' && (
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Manage Course Units</h2>
+              <button
+                onClick={() => {
+                  setShowUnitForm(!showUnitForm);
+                  setEditingUnit(null);
+                  setUnitForm({ name: '', code: '', credits: '', description: '' });
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center transition"
+              >
+                {showUnitForm ? <X size={20} className="mr-2" /> : <Plus size={20} className="mr-2" />}
+                {showUnitForm ? 'Cancel' : 'Create Unit'}
+              </button>
+            </div>
+
+            {/* Create/Edit Unit Form */}
+            {showUnitForm && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  {editingUnit ? 'Edit Unit' : 'Create New Unit'}
+                </h3>
+                <form onSubmit={handleUnitSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={unitForm.name}
+                        onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        placeholder="e.g., Web Development"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={unitForm.code}
+                        onChange={(e) => setUnitForm({ ...unitForm, code: e.target.value.toUpperCase() })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        placeholder="e.g., DIT401"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Credits
+                    </label>
+                    <input
+                      type="number"
+                      value={unitForm.credits}
+                      onChange={(e) => setUnitForm({ ...unitForm, credits: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      placeholder="e.g., 4"
+                      min="1"
+                      max="10"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={unitForm.description}
+                      onChange={(e) => setUnitForm({ ...unitForm, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      placeholder="Brief description of the unit"
+                      rows="3"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-semibold transition"
+                  >
+                    <Save className="inline mr-2" size={18} />
+                    {editingUnit ? 'Update Unit' : 'Create Unit'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Units List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {units.length > 0 ? (
+                units.map((unit) => (
+                  <div key={unit._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-800">{unit.name}</h3>
+                        <p className="text-sm text-gray-600">{unit.code}</p>
+                        {unit.credits && (
+                          <p className="text-xs text-gray-500 mt-1">{unit.credits} Credits</p>
+                        )}
+                      </div>
+                      <BookOpen className="text-orange-500" size={24} />
+                    </div>
+                    {unit.description && (
+                      <p className="text-sm text-gray-600 mb-3">{unit.description}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mb-3">
+                      Course: {unit.course?.name} ({unit.course?.code})
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditUnit(unit)}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center justify-center transition"
+                      >
+                        <Edit size={14} className="mr-1" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUnit(unit._id)}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded flex items-center justify-center transition"
+                      >
+                        <Trash2 size={14} className="mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <BookOpen className="mx-auto text-gray-400 mb-3" size={48} />
+                  <p className="text-gray-600 text-lg font-semibold mb-2">No Units Yet</p>
+                  <p className="text-gray-500 text-sm mb-4">
+                    Create units to organize your course content and assignments
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowUnitForm(true);
+                      setEditingUnit(null);
+                      setUnitForm({ name: '', code: '', credits: '', description: '' });
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg inline-flex items-center transition"
+                  >
+                    <Plus size={20} className="mr-2" />
+                    Create Your First Unit
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Confirm Delete Unit Dialog */}
+      {confirmDeleteUnit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 p-3 rounded-full mr-4">
+                <Trash2 className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Delete Unit?</h3>
+                <p className="text-gray-600 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this unit? This will affect assignments and timetables linked to it.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteUnit(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteUnitAction}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

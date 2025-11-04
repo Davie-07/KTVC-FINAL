@@ -61,21 +61,65 @@ router.get('/dashboard', protect, authorize('teacher'), async (req, res) => {
 });
 
 // @route   GET /api/teacher/students
-// @desc    Get all students in teacher's courses
+// @desc    Get students in teacher's course (filtered by level or all)
 // @access  Private/Teacher
 router.get('/students', protect, authorize('teacher'), async (req, res) => {
   try {
-    const units = await Unit.find({ teacher: req.user._id });
-    const courseIds = [...new Set(units.map(u => u.course))];
-    
-    const students = await User.find({ 
+    const teacher = await User.findById(req.user._id);
+    const { viewAll } = req.query; // ?viewAll=true to see all levels
+
+    if (!teacher.course) {
+      return res.status(400).json({ message: 'Teacher must have an assigned course' });
+    }
+
+    // Build query
+    const query = { 
       role: 'student', 
-      course: { $in: courseIds } 
-    })
+      course: teacher.course,
+      isActive: true
+    };
+
+    // Filter by teacher's level unless viewAll is true
+    if (!viewAll || viewAll === 'false') {
+      query.level = teacher.level;
+    }
+    
+    const students = await User.find(query)
       .populate('course', 'name code')
       .sort('name');
 
-    res.json(students);
+    // Get counts by level for the teacher's course
+    const levelCounts = await User.aggregate([
+      { 
+        $match: { 
+          role: 'student', 
+          course: teacher.course,
+          isActive: true
+        } 
+      },
+      {
+        $group: {
+          _id: '$level',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Total students in course
+    const totalInCourse = await User.countDocuments({
+      role: 'student',
+      course: teacher.course,
+      isActive: true
+    });
+
+    res.json({
+      students,
+      levelCounts,
+      totalInCourse,
+      teacherLevel: teacher.level,
+      teacherCourse: await Course.findById(teacher.course).select('name code'),
+      currentFilter: viewAll === 'true' ? 'all' : teacher.level
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -576,6 +620,106 @@ router.get('/units', protect, authorize('teacher'), async (req, res) => {
       .populate('course', 'name code')
       .sort('name');
     res.json(units);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/teacher/units
+// @desc    Create a new unit
+// @access  Private/Teacher
+router.post('/units', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const { name, code, credits, description } = req.body;
+    const teacher = await User.findById(req.user._id);
+
+    if (!teacher.course || !teacher.level) {
+      return res.status(400).json({ message: 'Teacher must have an assigned course and level' });
+    }
+
+    // Check if unit code already exists
+    const existingUnit = await Unit.findOne({ code });
+    if (existingUnit) {
+      return res.status(400).json({ message: 'Unit code already exists' });
+    }
+
+    const unit = await Unit.create({
+      name,
+      code,
+      course: teacher.course,
+      level: teacher.level,
+      teacher: teacher._id,
+      credits,
+      description
+    });
+
+    const populated = await Unit.findById(unit._id).populate('course', 'name code');
+    res.status(201).json(populated);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/teacher/units/:id
+// @desc    Update a unit
+// @access  Private/Teacher
+router.put('/units/:id', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const unit = await Unit.findOne({ _id: req.params.id, teacher: req.user._id });
+
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found or unauthorized' });
+    }
+
+    // Check if code is being changed and if it already exists
+    if (req.body.code && req.body.code !== unit.code) {
+      const existingUnit = await Unit.findOne({ code: req.body.code });
+      if (existingUnit) {
+        return res.status(400).json({ message: 'Unit code already exists' });
+      }
+    }
+
+    const updatedUnit = await Unit.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).populate('course', 'name code');
+
+    res.json(updatedUnit);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/teacher/units/:id
+// @desc    Delete a unit
+// @access  Private/Teacher
+router.delete('/units/:id', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const unit = await Unit.findOne({ _id: req.params.id, teacher: req.user._id });
+
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found or unauthorized' });
+    }
+
+    // Check if unit has assignments
+    const assignmentsCount = await Assignment.countDocuments({ unit: req.params.id });
+    if (assignmentsCount > 0) {
+      return res.status(400).json({ 
+        message: `Cannot delete unit. It has ${assignmentsCount} assignment(s) linked to it. Delete the assignments first.` 
+      });
+    }
+
+    // Check if unit has performance records
+    const performanceCount = await Performance.countDocuments({ unit: req.params.id });
+    if (performanceCount > 0) {
+      return res.status(400).json({ 
+        message: `Cannot delete unit. It has ${performanceCount} performance record(s). Delete them first.` 
+      });
+    }
+
+    await Unit.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Unit deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

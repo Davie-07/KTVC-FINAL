@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { BookOpen, Plus, Edit, Trash2, Users, CheckCircle, XCircle, Save, X, Download } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { BookOpen, Plus, Edit, Trash2, Users, CheckCircle, XCircle, Save, X, Download, AlertCircle } from 'lucide-react';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
   const [quote, setQuote] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState(null);
   const [showCourseForm, setShowCourseForm] = useState(false);
@@ -59,10 +62,10 @@ const Home = () => {
     try {
       if (editingCourse) {
         await axios.put(`/api/admin/course/${editingCourse._id}`, courseForm);
-        alert('Course updated successfully!');
+        showToast('Course updated successfully!', 'success');
       } else {
         await axios.post('/api/admin/course', courseForm);
-        alert('Course created successfully!');
+        showToast('Course created successfully!', 'success');
       }
 
       setCourseForm({ name: '', code: '', description: '', duration: '', level: 'Level 4' });
@@ -70,7 +73,7 @@ const Home = () => {
       setEditingCourse(null);
       fetchCourses();
     } catch (error) {
-      alert('Error: ' + error.response?.data?.message);
+      showToast(error.response?.data?.message || 'An error occurred', 'error');
     }
   };
 
@@ -87,15 +90,18 @@ const Home = () => {
   };
 
   const handleDeleteCourse = async (courseId) => {
-    if (!window.confirm('Are you sure you want to delete this course?')) return;
+    setConfirmDelete(courseId);
+  };
 
+  const confirmDeleteCourse = async () => {
     try {
-      await axios.delete(`/api/admin/course/${courseId}`);
-      alert('Course deleted successfully!');
+      await axios.delete(`/api/admin/course/${confirmDelete}`);
+      showToast('Course deleted successfully!', 'success');
       fetchCourses();
     } catch (error) {
-      alert('Error: ' + error.response?.data?.message);
+      showToast(error.response?.data?.message || 'Failed to delete course', 'error');
     }
+    setConfirmDelete(null);
   };
 
   const handleToggleCourseStatus = async (course) => {
@@ -429,6 +435,40 @@ const Home = () => {
           </table>
         </div>
       </div>
+
+      {/* Confirm Delete Dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 p-3 rounded-full mr-4">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Delete Course?</h3>
+                <p className="text-gray-600 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this course? All associated data will be removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCourse}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
