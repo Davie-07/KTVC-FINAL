@@ -21,10 +21,15 @@ const Users = () => {
   const fetchStudents = async () => {
     try {
       const response = await axios.get('/api/teacher/students');
-      setStudents(response.data);
+      // Handle both array response (old format) and object response (new format)
+      const studentsData = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.students || [];
+      setStudents(studentsData);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching students:', error);
+      setStudents([]); // Ensure students is always an array
       setLoading(false);
     }
   };
