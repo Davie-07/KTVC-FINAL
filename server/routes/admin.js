@@ -61,7 +61,7 @@ router.get('/dashboard', protect, authorize('admin'), async (req, res) => {
 // @access  Private/Admin
 router.post('/create-account', protect, authorize('admin'), async (req, res) => {
   try {
-    const { role, name, email, password, courseId } = req.body;
+    const { role, name, email, password, courseId, level } = req.body;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email });
@@ -84,6 +84,7 @@ router.post('/create-account', protect, authorize('admin'), async (req, res) => 
       case 'teacher':
         accountData.accountCode = await generateAccountCode(6, 'teacher');
         if (courseId) accountData.course = courseId;
+        if (level) accountData.level = level;
         break;
       case 'gateverification':
         accountData.accountId = await generateAccountCode(5, 'gate');
@@ -113,7 +114,8 @@ router.post('/create-account', protect, authorize('admin'), async (req, res) => 
         role: user.role,
         accountCode: user.accountCode,
         accountId: user.accountId,
-        course: user.course
+        course: user.course,
+        level: user.level
       }
     });
 

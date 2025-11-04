@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios'; // use project's axios instance
+import { useToast } from '../../context/ToastContext';
 import { UserPlus, Users, Edit, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff } from 'lucide-react';
 
 const Dashboards = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('create');
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -16,7 +18,8 @@ const Dashboards = () => {
     name: '',
     email: '',
     password: '',
-    courseId: ''
+    courseId: '',
+    level: ''
   });
 
   useEffect(() => {
@@ -64,7 +67,9 @@ const Dashboards = () => {
 
         switch (user.role) {
           case 'teacher':
-            credentialMessage = `Teacher Account Created!\n\nLogin Credentials:\nAccount Code: ${user.accountCode}\nPassword: ${accountForm.password}\n\nThe teacher can login using their 6-digit code.`;
+            const courseInfo = user.course ? `\nCourse: ${user.course.name} (${user.course.code})` : '';
+            const levelInfo = user.level ? `\nLevel: ${user.level}` : '';
+            credentialMessage = `Teacher Account Created!\n\nLogin Credentials:\nAccount Code: ${user.accountCode}\nPassword: ${accountForm.password}${courseInfo}${levelInfo}\n\nThe teacher can login using their 6-digit code.`;
             break;
           case 'gateverification':
             credentialMessage = `Gate Verification Account Created!\n\nLogin Credentials:\nAccount ID: ${user.accountId}\nPassword: ${accountForm.password}\n\nThe officer can login using their 5-digit ID.`;
@@ -78,19 +83,21 @@ const Dashboards = () => {
         }
 
         alert(credentialMessage);
+        showToast('Account created successfully!', 'success');
         
         setAccountForm({
           role: 'teacher',
           name: '',
           email: '',
           password: '',
-          courseId: ''
+          courseId: '',
+          level: ''
         });
         
         fetchUsers();
       }
     } catch (error) {
-      alert('Error: ' + (error.response?.data?.message || 'Account creation failed'));
+      showToast(error.response?.data?.message || 'Account creation failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -271,23 +278,46 @@ const Dashboards = () => {
               </div>
 
               {accountForm.role === 'teacher' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign Course
-                  </label>
-                  <select
-                    value={accountForm.courseId}
-                    onChange={(e) => setAccountForm({ ...accountForm, courseId: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="">No Course (Optional)</option>
-                    {courses.map((course) => (
-                      <option key={course._id} value={course._id}>
-                        {course.name} ({course.code})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-600 mt-1">Select which course this teacher will handle</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Assign Course <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={accountForm.courseId}
+                      onChange={(e) => setAccountForm({ ...accountForm, courseId: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      required
+                    >
+                      <option value="">Select a course</option>
+                      {courses.map((course) => (
+                        <option key={course._id} value={course._id}>
+                          {course.name} ({course.code})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-600 mt-1">Select which course this teacher will handle</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Assign Level <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={accountForm.level}
+                      onChange={(e) => setAccountForm({ ...accountForm, level: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      required
+                    >
+                      <option value="">Select a level</option>
+                      <option value="Level 1">Level 1</option>
+                      <option value="Level 2">Level 2</option>
+                      <option value="Level 3">Level 3</option>
+                      <option value="Level 4">Level 4</option>
+                      <option value="Level 5">Level 5</option>
+                      <option value="Level 6">Level 6</option>
+                    </select>
+                    <p className="text-xs text-gray-600 mt-1">Select which level this teacher will teach</p>
+                  </div>
                 </div>
               )}
 
