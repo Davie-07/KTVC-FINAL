@@ -18,7 +18,8 @@ const Management = () => {
     title: '',
     description: '',
     deadline: '',
-    totalMarks: ''
+    totalMarks: '',
+    unit: ''
   });
   
   // Units state
@@ -142,7 +143,8 @@ const Management = () => {
         title: '',
         description: '',
         deadline: '',
-        totalMarks: ''
+        totalMarks: '',
+        unit: ''
       });
       fetchAssignments();
     } catch (error) {
@@ -305,6 +307,30 @@ const Management = () => {
                       rows="3"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Unit <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={newAssignmentForm.unit}
+                      onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, unit: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      required
+                    >
+                      <option value="">Select a unit</option>
+                      {units.map((unit) => (
+                        <option key={unit._id} value={unit._id}>
+                          {unit.name} ({unit.code})
+                        </option>
+                      ))}
+                    </select>
+                    {units.length === 0 && (
+                      <p className="text-xs text-red-600 mt-1">
+                        No units available. Create units first in the Units tab.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

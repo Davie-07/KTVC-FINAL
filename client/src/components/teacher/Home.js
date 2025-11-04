@@ -612,6 +612,7 @@ const Home = () => {
                     >
                       <option value="Semester 1">Semester 1</option>
                       <option value="Semester 2">Semester 2</option>
+                      <option value="Semester 3">Semester 3</option>
                     </select>
                   </div>
                 </div>
