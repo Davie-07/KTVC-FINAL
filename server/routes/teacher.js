@@ -445,19 +445,22 @@ router.get('/assignments', protect, authorize('teacher'), async (req, res) => {
 // @access  Private/Teacher
 router.post('/assignments', protect, authorize('teacher'), async (req, res) => {
   try {
+    // Auto-populate course and level from teacher's account
     const assignment = await Assignment.create({
       ...req.body,
-      teacher: req.user._id
+      teacher: req.user._id,
+      course: req.user.course,
+      level: req.user.level
     });
 
     const populated = await Assignment.findById(assignment._id)
       .populate('unit', 'name code')
       .populate('course', 'name code');
 
-    // Notify students
+    // Notify students in the same course and level
     const students = await User.find({ 
-      course: req.body.course, 
-      level: req.body.level,
+      course: req.user.course, 
+      level: req.user.level,
       role: 'student'
     });
 
