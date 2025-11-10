@@ -68,19 +68,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           <p className="text-center text-xs lg:text-sm text-green-200 mt-2">Teacher Dashboard</p>
         </div>
 
-        {/* User Info */}
-        <div className="p-3 lg:p-4 border-b border-green-500">
-          <div className="text-center">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2">
-              <span className="text-green-600 font-bold text-lg lg:text-2xl">
-                {user?.name?.charAt(0)}
-              </span>
-            </div>
-            <p className="font-semibold text-sm lg:text-base">{user?.name}</p>
-            <p className="text-xs lg:text-sm text-green-200">Teacher</p>
-          </div>
-        </div>
-
         {/* Navigation Menu */}
         <nav className="flex-1 px-2 lg:px-4 py-4 space-y-1 lg:space-y-2 overflow-y-auto">
           {menuItems.map((item) => (

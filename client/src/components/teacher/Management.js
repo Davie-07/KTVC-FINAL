@@ -138,6 +138,11 @@ const Management = () => {
     setUploading(true);
     
     try {
+      // Get course and level from the selected unit
+      const selectedUnit = units.find(u => u._id === newAssignmentForm.unit);
+      const course = selectedUnit?.course;
+      const level = selectedUnit?.level;
+      
       // If file is selected, use upload endpoint
       if (selectedFile) {
         const formData = new FormData();
@@ -145,6 +150,8 @@ const Management = () => {
         formData.append('title', newAssignmentForm.title);
         formData.append('description', newAssignmentForm.description);
         formData.append('unit', newAssignmentForm.unit);
+        formData.append('course', course);
+        formData.append('level', level);
         formData.append('deadline', new Date(newAssignmentForm.deadline).toISOString());
         formData.append('type', uploadType);
         
@@ -159,6 +166,8 @@ const Management = () => {
         // Regular assignment creation without file
         await axios.post('/api/teacher/assignments', {
           ...newAssignmentForm,
+          course,
+          level,
           deadline: new Date(newAssignmentForm.deadline),
           type: uploadType
         });
