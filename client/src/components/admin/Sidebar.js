@@ -6,7 +6,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import Logo from '../common/Logo';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
-  const { user, logout } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

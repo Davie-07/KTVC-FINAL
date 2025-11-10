@@ -18,7 +18,7 @@ import { AuthContext } from '../../context/AuthContext';
 import Logo from '../common/Logo';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
-  const { user, logout } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
