@@ -5,7 +5,9 @@ import Sidebar from '../components/admin/Sidebar';
 import Home from '../components/admin/Home';
 import Dashboards from '../components/admin/Dashboards';
 import Notifications from '../components/admin/Notifications';
-import DeeAI from '../components/student/DeeAI'; // Reuse DeeAI component
+import DeeAI from '../components/student/DeeAI';
+import Settings from '../components/common/Settings';
+import Announcements from '../components/admin/Announcements';
 
 const AdminDashboard = () => {
   const { user, loading } = useContext(AuthContext);
@@ -24,7 +26,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -35,7 +37,9 @@ const AdminDashboard = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/dashboards" element={<Dashboards />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/announcements" element={<Announcements />} />
           <Route path="/deeai" element={<DeeAI />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
     </div>

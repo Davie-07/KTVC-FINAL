@@ -81,6 +81,10 @@ temp/
 *.temp
 .cache/
 
+# Uploaded files
+server/uploads/
+uploads/
+
 #Ignore all markdown files except README
 *.md
 !README.md

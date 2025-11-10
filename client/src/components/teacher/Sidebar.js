@@ -10,7 +10,9 @@ import {
   LogOut,
   Menu,
   X,
-  UserPlus
+  UserPlus,
+  Megaphone,
+  Wrench
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Logo from '../common/Logo';
@@ -29,10 +31,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Home', icon: Home, path: '/teacher/home' },
     { name: 'New Students', icon: UserPlus, path: '/teacher/new-students' },
     { name: 'Users', icon: Users, path: '/teacher/users' },
-    { name: 'Management', icon: Settings, path: '/teacher/management' },
+    { name: 'Management', icon: Wrench, path: '/teacher/management' },
     { name: 'Services', icon: Briefcase, path: '/teacher/services' },
     { name: 'Notifications', icon: Bell, path: '/teacher/notifications' },
+    { name: 'Announcements', icon: Megaphone, path: '/teacher/announcements' },
     { name: 'DeeAI', icon: Bot, path: '/teacher/deeai' },
+    { name: 'Settings', icon: Settings, path: '/teacher/settings' },
   ];
 
   return (

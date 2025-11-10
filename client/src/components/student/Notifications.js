@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
-import { Bell, CheckCircle, AlertCircle, Clock, DollarSign, FileText, BookOpen } from 'lucide-react';
+import { Bell, CheckCircle, AlertCircle, Clock, DollarSign, FileText, BookOpen, Megaphone, Calendar } from 'lucide-react';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     fetchNotifications();
+    fetchAnnouncements();
   }, []);
 
   const fetchNotifications = async () => {
@@ -19,6 +21,15 @@ const Notifications = () => {
     } catch (error) {
       console.error('Error fetching notifications:', error);
       setLoading(false);
+    }
+  };
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await axios.get('/api/student/announcements');
+      setAnnouncements(response.data);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
     }
   };
 
@@ -61,6 +72,16 @@ const Notifications = () => {
       default:
         return 'border-l-4 border-gray-300';
     }
+  };
+
+  const getAnnouncementPriorityBadge = (priority) => {
+    const colors = {
+      low: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+      high: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+      urgent: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+    };
+    return colors[priority] || colors.medium;
   };
 
   const filteredNotifications = filter === 'all' 
@@ -108,6 +129,43 @@ const Notifications = () => {
           ))}
         </div>
       </div>
+
+      {/* Announcements Section */}
+      {announcements.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+            <Megaphone className="mr-2 text-blue-500" size={24} />
+            Announcements
+          </h2>
+          <div className="space-y-3">
+            {announcements.map(announcement => (
+              <div
+                key={announcement._id}
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow hover:shadow-lg transition border-l-4 border-blue-500"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-gray-800 dark:text-white">{announcement.title}</h3>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${getAnnouncementPriorityBadge(announcement.priority)}`}>
+                    {announcement.priority.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-wrap">{announcement.message}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center">
+                    <Calendar size={14} className="mr-1" />
+                    Expires: {new Date(announcement.validUntil).toLocaleDateString()}
+                  </div>
+                  {announcement.createdBy && (
+                    <span>
+                      By: {announcement.createdBy.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Notifications List */}
       <div className="space-y-4">

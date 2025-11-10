@@ -8,7 +8,9 @@ import {
   DollarSign, 
   MessageSquare,
   Clock,
-  Download
+  Download,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -188,17 +190,62 @@ const Home = () => {
                 const isOverdue = daysLeft < 0;
                 
                 return (
-                  <div key={assignment._id} className={`border rounded-lg p-4 ${isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-                    <h3 className="font-semibold text-gray-800">{assignment.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{assignment.unit?.name}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500">
+                  <div key={assignment._id} className={`border rounded-lg p-4 ${isOverdue ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700' : 'border-gray-200 dark:border-gray-700 dark:bg-gray-800'}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800 dark:text-white">{assignment.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{assignment.unit?.name}</p>
+                      </div>
+                      {assignment.type === 'learning-material' && (
+                        <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs rounded">
+                          Material
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* PDF Attachment */}
+                    {assignment.attachments && assignment.attachments.length > 0 && (
+                      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-sm">
+                            <FileText className="text-blue-500 mr-2" size={16} />
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {assignment.attachments[0].originalName || 'Assignment.pdf'}
+                            </span>
+                          </div>
+                          <a
+                            href={`${axios.defaults.baseURL}/api/student/download/${assignment.attachments[0].filename}`}
+                            download
+                            className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-xs"
+                          >
+                            <Download size={14} className="mr-1" />
+                            Download
+                          </a>
+                        </div>
+                        {assignment.attachments[0].size && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Size: {(assignment.attachments[0].size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
                         Due: {new Date(assignment.deadline).toLocaleDateString()}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded ${isOverdue ? 'bg-red-200 text-red-700' : 'bg-green-200 text-green-700'}`}>
+                      <span className={`text-xs px-2 py-1 rounded ${isOverdue ? 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-300'}`}>
                         {isOverdue ? 'Overdue' : `${daysLeft} days left`}
                       </span>
                     </div>
+                    
+                    {/* Expiry warning for learning materials */}
+                    {assignment.type === 'learning-material' && assignment.expiryDate && (
+                      <div className="mt-2 flex items-center text-xs text-orange-600 dark:text-orange-400">
+                        <AlertCircle size={14} className="mr-1" />
+                        Expires: {new Date(assignment.expiryDate).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 );
               })

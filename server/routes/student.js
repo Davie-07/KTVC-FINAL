@@ -10,6 +10,9 @@ const Notification = require('../models/Notification');
 const Complaint = require('../models/Complaint');
 const Quote = require('../models/Quote');
 const GatePass = require('../models/GatePass');
+const Announcement = require('../models/Announcement');
+const path = require('path');
+const fs = require('fs');
 
 // @route   GET /api/student/dashboard
 // @desc    Get student dashboard data
@@ -271,8 +274,8 @@ router.get('/notifications/unread-count', protect, authorize('student'), async (
 
 // @route   POST /api/student/deeai/chat
 // @desc    Chat with Gemini AI
-// @access  Private/Student
-router.post('/deeai/chat', protect, authorize('student'), async (req, res) => {
+// @access  Private (All authenticated users)
+router.post('/deeai/chat', protect, async (req, res) => {
   try {
     const { message, conversationHistory } = req.body;
     
@@ -315,6 +318,71 @@ Student: ${message}`;
       error: 'Failed to get response from AI',
       message: error.message 
     });
+  }
+});
+
+// @route   GET /api/student/announcements
+// @desc    Get active announcements for student
+// @access  Private/Student
+router.get('/announcements', protect, authorize('student'), async (req, res) => {
+  try {
+    const now = new Date();
+    const announcements = await Announcement.find({
+      isActive: true,
+      validFrom: { $lte: now },
+      validUntil: { $gte: now },
+      $or: [
+        { targetAudience: 'all' },
+        { targetAudience: 'students' },
+        { targetAudience: 'specific-course', targetCourse: req.user.course }
+      ]
+    })
+      .populate('createdBy', 'name role')
+      .populate('targetCourse', 'name code')
+      .sort({ priority: -1, createdAt: -1 });
+
+    res.json(announcements);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/student/announcements/:id/read
+// @desc    Mark announcement as read
+// @access  Private/Student
+router.put('/announcements/:id/read', protect, authorize('student'), async (req, res) => {
+  try {
+    const announcement = await Announcement.findById(req.params.id);
+    
+    if (!announcement) {
+      return res.status(404).json({ message: 'Announcement not found' });
+    }
+
+    if (!announcement.readBy.includes(req.user._id)) {
+      announcement.readBy.push(req.user._id);
+      await announcement.save();
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/student/download/:filename
+// @desc    Download uploaded file
+// @access  Private
+router.get('/download/:filename', protect, async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    res.download(filePath);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

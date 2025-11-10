@@ -5,6 +5,8 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const Quote = require('../models/Quote');
 const Complaint = require('../models/Complaint');
+const Announcement = require('../models/Announcement');
+const Notification = require('../models/Notification');
 
 // Helper functions to generate account IDs
 const generateAccountCode = async (length, role) => {
@@ -496,6 +498,97 @@ router.get('/notifications/unread-count', protect, authorize('admin'), async (re
       status: 'Pending'
     });
     res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/admin/announcements
+// @desc    Create announcement (admin can target all roles)
+// @access  Private/Admin
+router.post('/announcements', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { title, message, targetAudience, targetCourse, priority, validFrom, validUntil } = req.body;
+    
+    const announcement = await Announcement.create({
+      title,
+      message,
+      createdBy: req.user._id,
+      targetAudience,
+      targetCourse,
+      priority,
+      validFrom: validFrom || Date.now(),
+      validUntil
+    });
+
+    // Create notifications for target audience
+    let recipients = [];
+    
+    if (targetAudience === 'all') {
+      recipients = await User.find({ role: { $in: ['student', 'teacher'] } });
+    } else if (targetAudience === 'students') {
+      recipients = await User.find({ role: 'student' });
+    } else if (targetAudience === 'teachers') {
+      recipients = await User.find({ role: 'teacher' });
+    } else if (targetAudience === 'specific-course' && targetCourse) {
+      recipients = await User.find({ 
+        role: { $in: ['student', 'teacher'] }, 
+        course: targetCourse 
+      });
+    }
+
+    // Create notifications
+    const notifications = recipients.map(user => ({
+      user: user._id,
+      type: 'announcement',
+      title: title,
+      message: message,
+      relatedModel: 'Announcement',
+      relatedId: announcement._id
+    }));
+
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
+
+    res.status(201).json({
+      success: true,
+      announcement,
+      recipientCount: recipients.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/admin/announcements
+// @desc    Get all announcements
+// @access  Private/Admin
+router.get('/announcements', protect, authorize('admin'), async (req, res) => {
+  try {
+    const announcements = await Announcement.find()
+      .populate('createdBy', 'name email role')
+      .populate('targetCourse', 'name code')
+      .sort({ createdAt: -1 });
+    
+    res.json(announcements);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/admin/announcements/:id
+// @desc    Delete announcement
+// @access  Private/Admin
+router.delete('/announcements/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    const announcement = await Announcement.findByIdAndDelete(req.params.id);
+
+    if (!announcement) {
+      return res.status(404).json({ message: 'Announcement not found' });
+    }
+
+    res.json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

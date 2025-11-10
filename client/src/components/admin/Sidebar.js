@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, LayoutDashboard, Bot, LogOut, Menu, X, Bell } from 'lucide-react';
+import { Home, LayoutDashboard, Bot, LogOut, Menu, X, Bell, Megaphone, Settings } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import Logo from '../common/Logo';
@@ -20,7 +20,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Home', icon: Home, path: '/admin/home' },
     { name: 'Dashboards', icon: LayoutDashboard, path: '/admin/dashboards' },
     { name: 'Notifications', icon: Bell, path: '/admin/notifications' },
-    { name: 'DeeAI', icon: Bot, path: '/admin/deeai' }
+    { name: 'Announcements', icon: Megaphone, path: '/admin/announcements' },
+    { name: 'DeeAI', icon: Bot, path: '/admin/deeai' },
+    { name: 'Settings', icon: Settings, path: '/admin/settings' }
   ];
 
   return (

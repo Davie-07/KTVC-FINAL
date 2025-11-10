@@ -9,6 +9,8 @@ import Services from '../components/teacher/Services';
 import Notifications from '../components/teacher/Notifications';
 import DeeAI from '../components/teacher/DeeAI';
 import NewStudents from '../components/teacher/NewStudents';
+import Settings from '../components/common/Settings';
+import Announcements from '../components/teacher/Announcements';
 
 const TeacherDashboard = () => {
   const { user, loading } = useContext(AuthContext);
@@ -27,7 +29,7 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -41,7 +43,9 @@ const TeacherDashboard = () => {
           <Route path="/management" element={<Management />} />
           <Route path="/services" element={<Services />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/announcements" element={<Announcements />} />
           <Route path="/deeai" element={<DeeAI />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
     </div>

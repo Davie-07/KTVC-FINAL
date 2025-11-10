@@ -8,6 +8,7 @@ import Messages from '../components/student/Messages';
 import KRAServices from '../components/student/KRAServices';
 import GateReceipt from '../components/student/GateReceipt';
 import DeeAI from '../components/student/DeeAI';
+import Settings from '../components/common/Settings';
 
 const StudentDashboard = () => {
   const { user, loading } = useContext(AuthContext);
@@ -26,7 +27,7 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -44,6 +45,7 @@ const StudentDashboard = () => {
           <Route path="/kra-services" element={<KRAServices />} />
           <Route path="/gate-receipt" element={<GateReceipt />} />
           <Route path="/deeai" element={<DeeAI />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
     </div>

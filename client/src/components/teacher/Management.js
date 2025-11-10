@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
 import { useToast } from '../../context/ToastContext';
-import { Settings, FileText, GraduationCap, Trash2, Edit, Save, X, BookOpen, Plus } from 'lucide-react';
+import { Settings, FileText, GraduationCap, Trash2, Edit, Save, X, BookOpen, Plus, Upload, Loader } from 'lucide-react';
 
 const Management = () => {
   const { showToast } = useToast();
@@ -14,6 +14,9 @@ const Management = () => {
   const [assignmentForm, setAssignmentForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadType, setUploadType] = useState('assignment');
+  const [uploading, setUploading] = useState(false);
   const [newAssignmentForm, setNewAssignmentForm] = useState({
     title: '',
     description: '',
@@ -132,13 +135,39 @@ const Management = () => {
 
   const handleCreateAssignment = async (e) => {
     e.preventDefault();
+    setUploading(true);
+    
     try {
-      await axios.post('/api/teacher/assignments', {
-        ...newAssignmentForm,
-        deadline: new Date(newAssignmentForm.deadline)
-      });
-      showToast('Assignment created successfully!', 'success');
+      // If file is selected, use upload endpoint
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('title', newAssignmentForm.title);
+        formData.append('description', newAssignmentForm.description);
+        formData.append('unit', newAssignmentForm.unit);
+        formData.append('deadline', new Date(newAssignmentForm.deadline).toISOString());
+        formData.append('type', uploadType);
+        
+        if (uploadType === 'assignment') {
+          formData.append('totalMarks', newAssignmentForm.totalMarks);
+        }
+        
+        await axios.post('/api/teacher/assignments/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        // Regular assignment creation without file
+        await axios.post('/api/teacher/assignments', {
+          ...newAssignmentForm,
+          deadline: new Date(newAssignmentForm.deadline),
+          type: uploadType
+        });
+      }
+      
+      showToast(`${uploadType === 'learning-material' ? 'Learning material' : 'Assignment'} created successfully!`, 'success');
       setShowCreateForm(false);
+      setSelectedFile(null);
+      setUploadType('assignment');
       setNewAssignmentForm({
         title: '',
         description: '',
@@ -149,6 +178,25 @@ const Management = () => {
       fetchAssignments();
     } catch (error) {
       showToast(error.response?.data?.message || 'Error creating assignment', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        showToast('Only PDF files are allowed', 'error');
+        e.target.value = null;
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('File size must be less than 10MB', 'error');
+        e.target.value = null;
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -333,6 +381,45 @@ const Management = () => {
                     )}
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <FileText className="inline mr-2" size={16} />
+                      Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={uploadType}
+                      onChange={(e) => setUploadType(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="assignment">Assignment</option>
+                      <option value="learning-material">Learning Material</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Upload className="inline mr-2" size={16} />
+                      Upload PDF (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleFileChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    />
+                    {selectedFile && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                        <p className="text-sm text-gray-700">
+                          <FileText className="inline mr-1" size={14} />
+                          {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Maximum file size: 10MB. Only PDF files are accepted.
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -347,25 +434,35 @@ const Management = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Total Marks <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={newAssignmentForm.totalMarks}
-                        onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, totalMarks: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        required
-                      />
-                    </div>
+                    {uploadType === 'assignment' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Total Marks <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={newAssignmentForm.totalMarks}
+                          onChange={(e) => setNewAssignmentForm({ ...newAssignmentForm, totalMarks: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                          required={uploadType === 'assignment'}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition"
+                    disabled={uploading}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 flex items-center justify-center"
                   >
-                    Create Assignment
+                    {uploading ? (
+                      <>
+                        <Loader className="animate-spin mr-2" size={20} />
+                        {selectedFile ? 'Uploading...' : 'Creating...'}
+                      </>
+                    ) : (
+                      `Create ${uploadType === 'learning-material' ? 'Learning Material' : 'Assignment'}`
+                    )}
                   </button>
                 </form>
               </div>

@@ -10,27 +10,30 @@ import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <ToastProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/student/*" element={<StudentDashboard />} />
-              <Route path="/teacher/*" element={<TeacherDashboard />} />
-              <Route path="/finance/*" element={<FinanceDashboard />} />
-              <Route path="/gate" element={<GateDashboard />} />
-              <Route path="/enrollment/*" element={<EnrollmentDashboard />} />
-              <Route path="/admin/*" element={<AdminDashboard />} />
-            </Routes>
-          </Router>
-        </ToastProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <ToastProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Login />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/student/*" element={<StudentDashboard />} />
+                <Route path="/teacher/*" element={<TeacherDashboard />} />
+                <Route path="/finance/*" element={<FinanceDashboard />} />
+                <Route path="/gate" element={<GateDashboard />} />
+                <Route path="/enrollment/*" element={<EnrollmentDashboard />} />
+                <Route path="/admin/*" element={<AdminDashboard />} />
+              </Routes>
+            </Router>
+          </ToastProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -10,6 +10,10 @@ const Performance = require('../models/Performance');
 const Notification = require('../models/Notification');
 const Complaint = require('../models/Complaint');
 const Quote = require('../models/Quote');
+const Announcement = require('../models/Announcement');
+const upload = require('../config/multer');
+const path = require('path');
+const fs = require('fs');
 
 // @route   GET /api/teacher/dashboard
 // @desc    Get teacher dashboard data
@@ -738,6 +742,162 @@ router.get('/notifications/unread-count', protect, authorize('teacher'), async (
       isRead: false
     });
     res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/teacher/assignments/upload
+// @desc    Create assignment with file upload
+// @access  Private/Teacher
+router.post('/assignments/upload', protect, authorize('teacher'), upload.single('file'), async (req, res) => {
+  try {
+    const { title, description, unit, course, level, deadline, totalMarks, type } = req.body;
+    
+    const assignmentData = {
+      title,
+      description,
+      type: type || 'assignment',
+      unit,
+      teacher: req.user._id,
+      course,
+      level,
+      deadline,
+      totalMarks: type === 'learning-material' ? undefined : totalMarks
+    };
+
+    // Add file attachment if uploaded
+    if (req.file) {
+      assignmentData.attachments = [{
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        path: req.file.path,
+        size: req.file.size
+      }];
+    }
+
+    // Set expiry date for learning materials (same as deadline)
+    if (type === 'learning-material') {
+      assignmentData.expiryDate = deadline;
+    }
+
+    const assignment = await Assignment.create(assignmentData);
+    
+    res.status(201).json({
+      success: true,
+      assignment,
+      message: type === 'learning-material' ? 'Learning material uploaded successfully' : 'Assignment created successfully'
+    });
+  } catch (error) {
+    // Delete uploaded file if assignment creation fails
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/teacher/download/:filename
+// @desc    Download uploaded file
+// @access  Private
+router.get('/download/:filename', protect, async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    res.download(filePath);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/teacher/announcements
+// @desc    Create announcement
+// @access  Private/Teacher
+router.post('/announcements', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const { title, message, targetAudience, targetCourse, priority, validFrom, validUntil } = req.body;
+    
+    const announcement = await Announcement.create({
+      title,
+      message,
+      createdBy: req.user._id,
+      targetAudience,
+      targetCourse,
+      priority,
+      validFrom: validFrom || Date.now(),
+      validUntil
+    });
+
+    // Create notifications for target audience
+    let recipients = [];
+    
+    if (targetAudience === 'all') {
+      recipients = await User.find({ role: 'student' });
+    } else if (targetAudience === 'students') {
+      recipients = await User.find({ role: 'student' });
+    } else if (targetAudience === 'specific-course' && targetCourse) {
+      recipients = await User.find({ role: 'student', course: targetCourse });
+    }
+
+    // Create notifications
+    const notifications = recipients.map(user => ({
+      user: user._id,
+      type: 'announcement',
+      title: title,
+      message: message,
+      relatedModel: 'Announcement',
+      relatedId: announcement._id
+    }));
+
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
+
+    res.status(201).json({
+      success: true,
+      announcement,
+      recipientCount: recipients.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/teacher/announcements
+// @desc    Get all announcements by teacher
+// @access  Private/Teacher
+router.get('/announcements', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const announcements = await Announcement.find({ createdBy: req.user._id })
+      .populate('targetCourse', 'name code')
+      .sort({ createdAt: -1 });
+    
+    res.json(announcements);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/teacher/announcements/:id
+// @desc    Delete announcement
+// @access  Private/Teacher
+router.delete('/announcements/:id', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const announcement = await Announcement.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ message: 'Announcement not found' });
+    }
+
+    await announcement.deleteOne();
+    res.json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -6,6 +6,11 @@ const assignmentSchema = new mongoose.Schema({
     required: true
   },
   description: String,
+  type: {
+    type: String,
+    enum: ['assignment', 'learning-material'],
+    default: 'assignment'
+  },
   unit: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Unit',
@@ -25,8 +30,20 @@ const assignmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  expiryDate: {
+    type: Date // For learning materials
+  },
   totalMarks: Number,
-  attachments: [String],
+  attachments: [{
+    filename: String,
+    originalName: String,
+    path: String,
+    size: Number,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   submissions: [{
     student: {
       type: mongoose.Schema.Types.ObjectId,

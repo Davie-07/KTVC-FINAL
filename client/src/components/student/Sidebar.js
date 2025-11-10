@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   Shield,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -33,6 +34,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'KRA Services', icon: Shield, path: '/student/kra-services' },
     { name: 'GateRcpt', icon: Receipt, path: '/student/gate-receipt' },
     { name: 'DeeAI', icon: Bot, path: '/student/deeai' },
+    { name: 'Settings', icon: Settings, path: '/student/settings' },
   ];
 
   return (
