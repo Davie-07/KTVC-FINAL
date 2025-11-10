@@ -90,12 +90,28 @@ const validateCSRF = (req, res, next) => {
   // Check if origin is allowed
   const isAllowed = allowedOrigins.some(allowed => {
     if (!allowed) return false;
-    const originUrl = new URL(origin);
-    const allowedUrl = new URL(allowed);
-    return originUrl.origin === allowedUrl.origin;
+    try {
+      const originUrl = new URL(origin);
+      const allowedUrl = new URL(allowed);
+      return originUrl.origin === allowedUrl.origin;
+    } catch (err) {
+      return false;
+    }
   });
 
-  if (!isAllowed && process.env.NODE_ENV === 'production') {
+  // Also check for trusted deployment platforms (Vercel, Netlify, Render)
+  const trustedDomains = ['.vercel.app', '.netlify.app', '.onrender.com', '.herokuapp.com'];
+  const isTrustedDomain = trustedDomains.some(domain => {
+    try {
+      const originUrl = new URL(origin);
+      return originUrl.hostname.endsWith(domain);
+    } catch (err) {
+      return false;
+    }
+  });
+
+  if (!isAllowed && !isTrustedDomain && process.env.NODE_ENV === 'production') {
+    console.warn(`⚠️  SECURITY: Blocked request from origin: ${origin}`);
     return res.status(403).json({ message: 'Invalid origin' });
   }
 

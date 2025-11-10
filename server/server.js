@@ -54,9 +54,26 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+
+    // Allow trusted deployment platforms
+    const trustedDomains = ['.vercel.app', '.netlify.app', '.onrender.com', '.herokuapp.com'];
+    const isTrustedDomain = trustedDomains.some(domain => {
+      try {
+        const originUrl = new URL(origin);
+        return originUrl.hostname.endsWith(domain);
+      } catch (err) {
+        return false;
+      }
+    });
+
+    if (isTrustedDomain || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
+      console.warn(`⚠️  CORS: Blocked request from origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
