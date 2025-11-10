@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from '../../services/axios';
 import { useToast } from '../../context/ToastContext';
-import { Bell, MessageSquare, HelpCircle, AlertCircle, Search, Filter, Loader } from 'lucide-react';
+import { Bell, MessageSquare, HelpCircle, AlertCircle, Search, Loader } from 'lucide-react';
 
 const Notifications = () => {
   const { showToast } = useToast();
@@ -13,11 +13,7 @@ const Notifications = () => {
   const [replyMessage, setReplyMessage] = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
 
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
-
-  const fetchComplaints = async () => {
+  const fetchComplaints = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/complaints');
       setComplaints(response.data);
@@ -27,7 +23,11 @@ const Notifications = () => {
       showToast('Error loading messages', 'error');
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, [fetchComplaints]);
 
   const handleReply = async (e) => {
     e.preventDefault();

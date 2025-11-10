@@ -8,8 +8,6 @@ import {
   DollarSign, 
   MessageSquare,
   Clock,
-  CheckCircle,
-  AlertCircle,
   Download
 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
