@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -27,16 +27,7 @@ const Announcements = () => {
     validUntil: ''
   });
 
-  useEffect(() => {
-    fetchAnnouncements();
-    if (user?.role === 'teacher') {
-      fetchCourses();
-    } else if (user?.role === 'admin') {
-      fetchAllCourses();
-    }
-  }, []);
-
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
       const endpoint = user?.role === 'admin' 
         ? '/api/admin/announcements'
@@ -48,25 +39,34 @@ const Announcements = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.role, showToast]);
 
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const response = await axios.get('/api/teacher/courses');
       setCourses(response.data);
     } catch (error) {
       console.error('Failed to load courses');
     }
-  };
+  }, []);
 
-  const fetchAllCourses = async () => {
+  const fetchAllCourses = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/courses');
       setCourses(response.data);
     } catch (error) {
       console.error('Failed to load courses');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    if (user?.role === 'teacher') {
+      fetchCourses();
+    } else if (user?.role === 'admin') {
+      fetchAllCourses();
+    }
+  }, [fetchAnnouncements, fetchCourses, fetchAllCourses, user?.role]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

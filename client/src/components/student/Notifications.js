@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from '../../services/axios';
 import { Bell, CheckCircle, AlertCircle, Clock, DollarSign, FileText, BookOpen, Megaphone, Calendar } from 'lucide-react';
 
@@ -8,12 +8,7 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    fetchNotifications();
-    fetchAnnouncements();
-  }, []);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const response = await axios.get('/api/student/notifications');
       setNotifications(response.data);
@@ -22,16 +17,21 @@ const Notifications = () => {
       console.error('Error fetching notifications:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
       const response = await axios.get('/api/student/announcements');
       setAnnouncements(response.data);
     } catch (error) {
       console.error('Error fetching announcements:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchAnnouncements();
+  }, [fetchNotifications, fetchAnnouncements]);
 
   const markAsRead = async (id) => {
     try {
