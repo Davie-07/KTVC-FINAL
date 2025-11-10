@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios'; // use project's axios instance
 import { useToast } from '../../context/ToastContext';
-import { UserPlus, Users, Edit, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff, Key, Loader } from 'lucide-react';
+import { UserPlus, Users, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff, Key, Loader } from 'lucide-react';
 
 const Dashboards = () => {
   const { showToast } = useToast();
@@ -84,6 +84,9 @@ const Dashboards = () => {
             break;
           case 'enrollment':
             credentialMessage = `Enrollment Account Created!\n\nLogin Credentials:\nAccount ID: ${user.accountId}\nPassword: ${accountForm.password}\n\nThe officer can login using their 4-digit ID.`;
+            break;
+          default:
+            credentialMessage = `Account Created!\n\nLogin Credentials:\nAccount ID: ${user.accountId || user.accountCode}\nPassword: ${accountForm.password}`;
             break;
         }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../services/axios';
 import { AuthContext } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { BookOpen, Plus, Edit, Trash2, Users, CheckCircle, XCircle, Save, X, Download, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, CheckCircle, XCircle, Save, X, Download, AlertCircle } from 'lucide-react';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
