@@ -480,22 +480,7 @@ const Login = () => {
               Forgot Password?
             </button>
           </div>
-        </form>
-
-        {/* Info Text */}
-        <div className="mt-6 space-y-2">
-          <div className="text-center text-sm text-gray-600 border-t pt-4">
-            <p className="font-semibold mb-2">Login Formats:</p>
-            <div className="text-xs space-y-1 text-left bg-gray-50 p-3 rounded">
-              <p>• <strong>Students:</strong> Admission No. + Course</p>
-              <p>• <strong>Teachers:</strong> 6-digit Code + Password</p>
-              <p>• <strong>Gate:</strong> 5-digit ID + Password</p>
-              <p>• <strong>Finance:</strong> 7-digit ID + Password</p>
-              <p>• <strong>Enrollment:</strong> 4-digit ID + Password</p>
-              <p>• <strong>Admin:</strong> Email + Password</p>
-            </div>
-          </div>
-        </div>
+        </form>        
       </div>
     </div>
   );

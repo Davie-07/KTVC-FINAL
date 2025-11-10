@@ -8,13 +8,16 @@ import {
   LogOut,
   Menu,
   X,
-  Shield
+  Shield,
+  MessageSquare
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import Logo from '../common/Logo';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useContext(AuthContext);
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -26,6 +29,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const menuItems = [
     { name: 'Home', icon: Home, path: '/student/home' },
     { name: 'Notifications', icon: Bell, path: '/student/notifications' },
+    { name: 'Messages', icon: MessageSquare, path: '/student/messages' },
     { name: 'KRA Services', icon: Shield, path: '/student/kra-services' },
     { name: 'GateRcpt', icon: Receipt, path: '/student/gate-receipt' },
     { name: 'DeeAI', icon: Bot, path: '/student/deeai' },
@@ -81,15 +85,22 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               to={item.path}
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+                `flex items-center justify-between px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'bg-white text-blue-600 shadow-lg'
                     : 'text-white hover:bg-blue-500'
                 }`
               }
             >
-              <item.icon className="w-4 h-4 lg:w-5 lg:h-5" />
-              <span className="ml-3 text-sm lg:text-base font-medium">{item.name}</span>
+              <div className="flex items-center">
+                <item.icon className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span className="ml-3 text-sm lg:text-base font-medium">{item.name}</span>
+              </div>
+              {item.name === 'Notifications' && unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

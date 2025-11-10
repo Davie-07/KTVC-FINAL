@@ -4,6 +4,7 @@ const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const Quote = require('../models/Quote');
+const Complaint = require('../models/Complaint');
 
 // Helper functions to generate account IDs
 const generateAccountCode = async (length, role) => {
@@ -380,6 +381,121 @@ router.post('/quote', protect, authorize('admin'), async (req, res) => {
       quote
     });
 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/admin/complaints
+// @desc    Get all student complaints/messages
+// @access  Private/Admin
+router.get('/complaints', protect, authorize('admin'), async (req, res) => {
+  try {
+    const complaints = await Complaint.find()
+      .populate('student', 'name email admissionNumber')
+      .populate('responses.respondent', 'name role')
+      .sort('-createdAt');
+    
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/admin/complaints/:id/reply
+// @desc    Reply to a complaint
+// @access  Private/Admin
+router.post('/complaints/:id/reply', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+    
+    complaint.responses.push({
+      respondent: req.user._id,
+      message,
+      date: new Date()
+    });
+    
+    if (complaint.status === 'Pending') {
+      complaint.status = 'In Progress';
+    }
+    
+    await complaint.save();
+    
+    res.json({ message: 'Reply sent successfully', complaint });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/admin/complaints/:id/status
+// @desc    Update complaint status
+// @access  Private/Admin
+router.put('/complaints/:id/status', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    const complaint = await Complaint.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    ).populate('student', 'name email admissionNumber')
+     .populate('responses.respondent', 'name role');
+    
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+    
+    res.json(complaint);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/admin/reset-password/:userId
+// @desc    Reset staff account password
+// @access  Private/Admin
+router.put('/reset-password/:userId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Only allow resetting passwords for staff accounts (not students or other admins)
+    if (user.role === 'student' || user.role === 'admin') {
+      return res.status(403).json({ message: 'Cannot reset password for this account type' });
+    }
+    
+    user.password = newPassword;
+    user.passwordSet = true;
+    await user.save();
+    
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/admin/notifications/unread-count
+// @desc    Get unread notification count for admin (pending complaints)
+// @access  Private/Admin
+router.get('/notifications/unread-count', protect, authorize('admin'), async (req, res) => {
+  try {
+    const count = await Complaint.countDocuments({
+      status: 'Pending'
+    });
+    res.json({ count });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

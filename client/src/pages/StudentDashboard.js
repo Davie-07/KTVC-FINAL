@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import Sidebar from '../components/student/Sidebar';
 import Home from '../components/student/Home';
 import Notifications from '../components/student/Notifications';
+import Messages from '../components/student/Messages';
 import KRAServices from '../components/student/KRAServices';
 import GateReceipt from '../components/student/GateReceipt';
 import DeeAI from '../components/student/DeeAI';
@@ -39,6 +40,7 @@ const StudentDashboard = () => {
           <Route path="/" element={<Navigate to="/student/home" />} />
           <Route path="/home" element={<Home />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/messages" element={<Messages />} />
           <Route path="/kra-services" element={<KRAServices />} />
           <Route path="/gate-receipt" element={<GateReceipt />} />
           <Route path="/deeai" element={<DeeAI />} />

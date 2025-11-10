@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import Sidebar from '../components/admin/Sidebar';
 import Home from '../components/admin/Home';
 import Dashboards from '../components/admin/Dashboards';
+import Notifications from '../components/admin/Notifications';
 import DeeAI from '../components/student/DeeAI'; // Reuse DeeAI component
 
 const AdminDashboard = () => {
@@ -33,6 +34,7 @@ const AdminDashboard = () => {
           <Route path="/" element={<Navigate to="/admin/home" />} />
           <Route path="/home" element={<Home />} />
           <Route path="/dashboards" element={<Dashboards />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/deeai" element={<DeeAI />} />
         </Routes>
       </div>

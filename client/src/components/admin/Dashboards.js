@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios'; // use project's axios instance
 import { useToast } from '../../context/ToastContext';
-import { UserPlus, Users, Edit, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Users, Edit, Trash2, Search, Shield, DollarSign, ShieldCheck, UserCheck, Eye, EyeOff, Key, Loader } from 'lucide-react';
 
 const Dashboards = () => {
   const { showToast } = useToast();
@@ -12,6 +12,11 @@ const Dashboards = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null);
 
   const [accountForm, setAccountForm] = useState({
     role: 'teacher',
@@ -106,12 +111,44 @@ const Dashboards = () => {
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to delete this user account?')) return;
 
+    setDeletingUserId(userId);
     try {
       await axios.delete(`/api/admin/user/${userId}`);
-      alert('User deleted successfully!');
+      showToast('User deleted successfully!', 'success');
       fetchUsers();
     } catch (error) {
-      alert('Error: ' + error.response?.data?.message);
+      showToast(error.response?.data?.message || 'Error deleting user', 'error');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await axios.put(`/api/admin/reset-password/${resetPasswordUser._id}`, {
+        newPassword
+      });
+      showToast('Password reset successfully!', 'success');
+      setResetPasswordUser(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Error resetting password', 'error');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -424,13 +461,35 @@ const Dashboards = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <button
-                          onClick={() => handleDeleteUser(user._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center"
-                        >
-                          <Trash2 size={14} className="mr-1" />
-                          Delete
-                        </button>
+                        <div className="flex gap-2">
+                          {(user.role !== 'student' && user.role !== 'admin') && (
+                            <button
+                              onClick={() => setResetPasswordUser(user)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded flex items-center"
+                              title="Reset Password"
+                            >
+                              <Key size={14} className="mr-1" />
+                              Reset
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteUser(user._id)}
+                            disabled={deletingUserId === user._id}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center disabled:opacity-50"
+                          >
+                            {deletingUserId === user._id ? (
+                              <>
+                                <Loader className="animate-spin mr-1" size={14} />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 size={14} className="mr-1" />
+                                Delete
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -446,6 +505,96 @@ const Dashboards = () => {
           </div>
         )}
       </div>
+
+      {/* Reset Password Modal */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="bg-blue-100 p-3 rounded-full mr-3">
+                  <Key className="text-blue-600" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Reset Password</h3>
+                  <p className="text-sm text-gray-600">{resetPasswordUser.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setResetPasswordUser(null);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter new password"
+                  minLength="8"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Confirm new password"
+                  minLength="8"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetPasswordUser(null);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {resetLoading ? (
+                    <>
+                      <Loader className="animate-spin" size={18} />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

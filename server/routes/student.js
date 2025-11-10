@@ -254,4 +254,68 @@ router.get('/quote', protect, authorize('student'), async (req, res) => {
   }
 });
 
+// @route   GET /api/student/notifications/unread-count
+// @desc    Get unread notification count
+// @access  Private/Student
+router.get('/notifications/unread-count', protect, authorize('student'), async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      recipient: req.user._id,
+      isRead: false
+    });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/student/deeai/chat
+// @desc    Chat with Gemini AI
+// @access  Private/Student
+router.post('/deeai/chat', protect, authorize('student'), async (req, res) => {
+  try {
+    const { message, conversationHistory } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI('AIzaSyCVSjFCmdsWugSlHduZ6O_8Ab6WAKn5aNk');
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    // Build conversation context
+    let prompt = `You are DeeAI, a friendly and knowledgeable AI assistant for students at Kisumu Technical and Vocational College (KTVC). 
+Your role is to help students with their academic questions, provide study guidance, explain concepts, and offer support.
+Be encouraging, patient, and educational in your responses.
+
+Student: ${message}`;
+
+    // Add conversation history if provided
+    if (conversationHistory && conversationHistory.length > 0) {
+      const context = conversationHistory
+        .slice(-6) // Last 6 messages for context
+        .map(msg => `${msg.role === 'user' ? 'Student' : 'DeeAI'}: ${msg.content}`)
+        .join('\n');
+      prompt = `Previous conversation:\n${context}\n\n${prompt}`;
+    }
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ 
+      response: text,
+      success: true 
+    });
+
+  } catch (error) {
+    console.error('Gemini AI Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get response from AI',
+      message: error.message 
+    });
+  }
+});
+
 module.exports = router;

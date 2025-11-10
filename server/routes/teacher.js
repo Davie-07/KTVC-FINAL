@@ -728,4 +728,19 @@ router.delete('/units/:id', protect, authorize('teacher'), async (req, res) => {
   }
 });
 
+// @route   GET /api/teacher/notifications/unread-count
+// @desc    Get unread notification count
+// @access  Private/Teacher
+router.get('/notifications/unread-count', protect, authorize('teacher'), async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      recipient: req.user._id,
+      isRead: false
+    });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
