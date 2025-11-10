@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../services/axios';
-import { Users, CheckCircle, X, AlertCircle } from 'lucide-react';
+import { Users, CheckCircle, AlertCircle } from 'lucide-react';
 
 const NewStudents = () => {
   const [newStudents, setNewStudents] = useState([]);

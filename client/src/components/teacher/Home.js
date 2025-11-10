@@ -7,10 +7,8 @@ import {
   Calendar, 
   GraduationCap,
   Plus,
-  Edit,
   Trash2,
   CheckCircle,
-  X,
   Save,
   Download
 } from 'lucide-react';

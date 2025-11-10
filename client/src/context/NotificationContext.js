@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from '../services/axios';
 import { AuthContext } from './AuthContext';
 
@@ -9,7 +9,7 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const updatePWABadge = (count) => {
+  const updatePWABadge = useCallback((count) => {
     // Update PWA badge on mobile devices
     if ('navigator' in window && 'setAppBadge' in navigator) {
       if (count > 0) {
@@ -26,9 +26,9 @@ export const NotificationProvider = ({ children }) => {
         count: count
       });
     }
-  };
+  }, []);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -60,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, updatePWABadge]);
 
   useEffect(() => {
     if (user) {
@@ -69,7 +69,7 @@ export const NotificationProvider = ({ children }) => {
       const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, fetchUnreadCount]);
 
   const refreshCount = () => {
     fetchUnreadCount();
