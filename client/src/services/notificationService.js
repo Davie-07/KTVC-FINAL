@@ -97,4 +97,5 @@ class NotificationService {
 }
 
 // Export singleton instance
-export default new NotificationService();
+const notificationService = new NotificationService();
+export default notificationService;

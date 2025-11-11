@@ -61,4 +61,5 @@ class NetworkService {
   }
 }
 
-export default new NetworkService();
+const networkService = new NetworkService();
+export default networkService;
