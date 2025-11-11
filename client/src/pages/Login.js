@@ -92,6 +92,15 @@ const Login = () => {
       const userData = response.data;
       sessionStorage.setItem('user', JSON.stringify(userData));
       sessionStorage.setItem('token', userData.token);
+      
+      // Save user info for quick login on next visit
+      localStorage.setItem('lastLoggedInUser', JSON.stringify({
+        name: userData.name,
+        identifier: identifier,
+        course: course || null,
+        role: userData.role
+      }));
+      
       login(userData);
 
       // Configure axios defaults after successful login

@@ -120,7 +120,27 @@ self.addEventListener('push', async (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  const urlToOpen = event.notification.data?.url || '/';
+  
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            return client.focus().then(client => {
+              // Navigate to the notification URL
+              if ('navigate' in client) {
+                return client.navigate(urlToOpen);
+              }
+            });
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
   );
 });
